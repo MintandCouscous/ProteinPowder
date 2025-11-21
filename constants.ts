@@ -5,29 +5,29 @@ export const INITIAL_SYSTEM_INSTRUCTION = `
 ROLE: Senior Investment Banking Analyst (TMT / M&A Focus).
 OBJECTIVE: Analyze proprietary financial documents to provide accurate, sourced, and high-context answers.
 
-### CRITICAL INTELLIGENCE INSTRUCTIONS:
+### CORE BEHAVIORS (v1.2.1):
 
-1. **Context Retention (Memory)**: 
-   - The user will ask follow-up questions like "What about them?" or "Who are the investors?". 
-   - You MUST strictly infer the subject from the *immediately preceding* conversation history.
-   - Example: User: "Tell me about Project Titan." -> AI: "Titan is..." -> User: "What are the risks?" -> AI: (Must answer risks of Titan, not general risks).
+1. **Deep Context Awareness (Critical)**: 
+   - Treat this as a continuous conversation, not isolated queries.
+   - **Implied Subjects**: If the user asks "What about them?", "Are they profitable?", or "Did we reach out?", you MUST infer the entity from the *immediately preceding* interaction.
+   - **Follow-up Logic**: If a user refines a question (e.g., "and for Q3?"), apply that constraint to the previously discussed topic.
 
-2. **Fuzzy Matching & Entity Resolution**: 
-   - Users make typos. If a user asks for "pai ventures", and your documents contain "Pi Ventures", YOU MUST ASSUME they mean "Pi Ventures".
-   - Do not ask for clarification unless the ambiguity is unresolvable. State your assumption: "Assuming you are referring to 'Pi Ventures' found in the Cap Table..."
+2. **Fuzzy Entity Matching**: 
+   - Users often use shorthand or have typos (e.g., "pai" = "Pi Ventures", "chiratae" = "Chiratae Ventures", "sequoia" = "Sequoia Capital").
+   - **Action**: Automatically infer the correct entity based on phonetics and context found in the documents. 
+   - **Do NOT** say "I cannot find 'pai'". Instead, say "Assuming you refer to 'Pi Ventures' found in the outreach tracker..."
 
-3. **Data Extraction**:
-   - If the user asks for a metric (EBITDA, Revenue, multiples), look for it in Tables, Spreadsheets, and Text.
-   - If an Excel file is provided, treat the raw text data as structured tables.
+3. **Data Synthesis**:
+   - **Excel/CSV Handling**: Aggressively scan tabular data. Treat row headers as entities and column headers as metrics.
+   - **Cross-Referencing**: If one doc has "Revenue" and another has "Deal Status", combine them into a single answer.
 
 4. **Negative Constraints**:
-   - If the information is truly not in the documents, say: "Based on the provided deal room data, I cannot find specific details on [Topic]. The available documents cover [Brief list of coverage]."
-   - Do NOT hallucinate numbers.
+   - If information is truly missing after fuzzy matching, say: "Based on the provided deal room data, I cannot find specific details on [Topic]."
 
 ### TONE & FORMAT:
 - **Executive Summary Style**: High density, low fluff.
 - **Source Citations**: Always cite the filename, e.g., "Revenue grew 20% YoY [[Source: FY23_Financials.xlsx]]."
-- **Structuring**: Use Markdown tables for financial comparisons.
+- **Tables**: Use Markdown tables for all financial comparisons.
 `;
 
 export const DUMMY_DOCUMENTS: DocumentFile[] = [
@@ -92,14 +92,11 @@ Current valuation trading at 12x EBITDA, below peer average of 15x.
 - Cost Synergies: Est. $30M annually via headcount rationalization and shared HQ costs.
 - Revenue Synergies: Cross-selling Titan's Edge product to our Enterprise client base could yield $50M+ by Year 2.
 
-4. RISKS & MITIGANTS
-- Regulatory: EU antitrust scrutiny is high for cloud mergers. (Mitigant: Titan has <5% market share in EU).
-- Customer Concentration: Top 3 clients = 40% of revenue. (Mitigant: Long-term contracts in place until 2026).
-- Tech Debt: Legacy platform requires $20M one-time upgrade.
-
-5. RECOMMENDATION
-Proceed to Due Diligence phase. Submit non-binding IOI at $1.2B - $1.4B range.`,
-    isInlineData: false,
+4. RISKS
+- Customer Concentration: Top 3 clients account for 40% of revenue.
+- Tech Debt: Older stack requires $15M modernization investment.
+    `, 
+    isInlineData: false, 
     mimeType: 'text/plain',
     category: 'memo',
     uploadDate: '2024-10-10',
@@ -108,27 +105,28 @@ Proceed to Due Diligence phase. Submit non-binding IOI at $1.2B - $1.4B range.`,
     id: 'doc-3',
     name: 'Global_Energy_Transition_Report.txt',
     type: 'TXT',
-    content: `SECTOR UPDATE: RENEWABLES & ENERGY STORAGE
-Date: Sep 22, 2024
+    content: `GLOBAL ENERGY TRANSITION 2024
+Focus: Renewable Infrastructure Financing
 
-The shift to green hydrogen and battery storage is accelerating. 
-Capital expenditure in APAC region expected to double by 2026 to support grid modernization.
+1. MARKET TRENDS
+Capital deployment in renewable energy projects reached $1.1T in 2023.
+Solar PV remains the dominant technology, accounting for 60% of new capacity.
 
-KEY PLAYERS TO WATCH:
-1. GreenGen (Ticker: GGEN): Leading electrolyzer tech. Just signed 5GW deal with India.
-2. SolarOne (Ticker: SONE): Dominant in residential solar, but facing margin compression from Chinese panel imports.
-3. HydroX: Speculative play in blue hydrogen.
+2. REGULATORY HEADWINDS
+- Grid interconnection delays in the US are averaging 18-24 months.
+- EU supply chain due diligence laws are increasing compliance costs for battery importers.
 
-REGULATORY TAILWINDS:
-- US: Inflation Reduction Act 2.0 credits extended to 2035.
-- EU: Green Deal Industrial Plan simplifies permitting for wind farms.
+3. INVESTMENT OPPORTUNITIES
+- Battery Energy Storage Systems (BESS): Revenue arbitrage opportunities in volatile markets.
+- Green Hydrogen: While promising, LCOE remains uncompetitive without significant subsidies ($3/kg target).
 
-MARKET RISKS:
-- Supply Chain: Lithium and Cobalt prices remain volatile.
-- Interest Rates: High cost of capital is delaying roughly 15% of planned utility-scale projects.`,
-    isInlineData: false,
+4. RISKS
+- Interest Rate Sensitivity: High cost of capital is squeezing IRR for levered projects.
+- Commodity Volatility: Lithium and Cobalt pricing instability affects project modeling.
+    `, 
+    isInlineData: false, 
     mimeType: 'text/plain',
     category: 'financial',
-    uploadDate: '2024-09-22',
+    uploadDate: '2024-09-20',
   }
 ];

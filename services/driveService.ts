@@ -127,29 +127,32 @@ export const openDrivePicker = (
     return;
   }
 
+  // Comprehensive list of MIME types to ensure Excel/CSV/PDF are visible
   const supportedMimeTypes = [
     "application/pdf",
     "text/plain",
     "text/csv",
     "application/vnd.google-apps.document",
     "application/vnd.google-apps.spreadsheet",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-excel"
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
+    "application/vnd.ms-excel", // .xls
+    "application/vnd.google-apps.folder" // Folders
   ].join(",");
 
   // 1. View for Files (PDF, Docs, Sheets, EXCEL, CSV)
-  // We use DocsView instead of simple View to get better navigation features
   const filesView = new window.google.picker.DocsView(window.google.picker.ViewId.DOCS);
   filesView.setMimeTypes(supportedMimeTypes);
   filesView.setIncludeFolders(true); 
-  filesView.setSelectFolderEnabled(false); // This tab is for Files
+  filesView.setSelectFolderEnabled(false);
   filesView.setLabel("Select Files");
 
   // 2. View for Folder Selection
-  const folderView = new window.google.picker.DocsView(window.google.picker.ViewId.FOLDERS);
+  // Crucial: Using DocsView with setSelectFolderEnabled(true) allows picking folders.
+  // We ALSO setMimeTypes so that files INSIDE the folder are visible to the user during selection.
+  const folderView = new window.google.picker.DocsView(window.google.picker.ViewId.DOCS);
   folderView.setSelectFolderEnabled(true);
   folderView.setIncludeFolders(true);
-  folderView.setMimeTypes('application/vnd.google-apps.folder');
+  folderView.setMimeTypes(supportedMimeTypes); 
   folderView.setLabel("Select Folder (Ingest All)");
 
   const picker = new window.google.picker.PickerBuilder()
@@ -174,7 +177,7 @@ export const openDrivePicker = (
  * Lists files inside a Google Drive folder
  */
 const listFilesInFolder = async (folderId: string, accessToken: string): Promise<any[]> => {
-  // Updated Query: Explicitly include Excel and CSV mimeTypes
+  // Explicitly search for Office formats, PDFs, and CSVs
   const query = `'${folderId}' in parents and trashed = false and (` +
     `mimeType = 'application/pdf' or ` +
     `mimeType = 'text/plain' or ` +
@@ -243,7 +246,8 @@ export const processPickedFiles = async (pickedFiles: any[], token: string): Pro
 
   // 1. Expand Folders
   for (const file of pickedFiles) {
-    if (file.mimeType === 'application/vnd.google-apps.folder') {
+    // Check for both standard folder mimetype and if the user picked a folder via DocsView
+    if (file.mimeType === 'application/vnd.google-apps.folder' || file.type === 'folder') {
       const folderFiles = await listFilesInFolder(file.id, token);
       filesToDownload = [...filesToDownload, ...folderFiles];
     } else {
@@ -270,9 +274,7 @@ export const processPickedFiles = async (pickedFiles: any[], token: string): Pro
       } else if (file.mimeType.includes('csv') || file.mimeType.includes('text')) {
         effectiveType = 'TXT';
       } else if (file.mimeType.includes('spreadsheet') || file.mimeType.includes('excel')) {
-        // Treat Excel as Binary (GenAI can often read it) or Text if CSV
         effectiveType = 'XLSX';
-        // Important: For Excel, we keep the original mimeType so GenAI knows how to parse the blob
       }
 
       processedDocs.push({
