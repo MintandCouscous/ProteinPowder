@@ -444,7 +444,7 @@ const App: React.FC = () => {
                 <p className="text-xs text-slate-400">Connect your GitHub repo to Vercel. It will auto-detect the build settings (Vite/React).</p>
                 
                 <h4 className="text-sm font-bold text-white uppercase tracking-wider mt-6">3. Add Environment Variables</h4>
-                <p className="text-xs text-slate-400">In the Vercel Project Settings > Environment Variables, add these keys:</p>
+                <p className="text-xs text-slate-400">In the Vercel Project Settings &gt; Environment Variables, add these keys:</p>
                 
                 <div className="bg-black rounded-lg border border-slate-800 p-4 relative group">
                   <button 
