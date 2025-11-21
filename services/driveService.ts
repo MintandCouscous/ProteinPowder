@@ -1,5 +1,6 @@
 
 import { DocumentFile } from '../types';
+import { read, utils } from 'xlsx';
 
 // Types for Google API globals
 declare global {
@@ -211,8 +212,12 @@ export const downloadDriveFile = async (fileId: string, mimeType: string, access
   let url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
   
   // Export Google Docs/Sheets as PDF
-  if (mimeType.includes('application/vnd.google-apps')) {
+  if (mimeType.includes('application/vnd.google-apps.document')) {
     url = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=application/pdf`;
+  }
+  // Export Google Sheets as Excel (XLSX) to be processed as binary
+  else if (mimeType.includes('application/vnd.google-apps.spreadsheet')) {
+    url = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`;
   }
 
   const response = await fetch(url, {
@@ -265,24 +270,60 @@ export const processPickedFiles = async (pickedFiles: any[], token: string): Pro
       
       let effectiveMimeType = file.mimeType;
       let effectiveType = 'FILE';
+      let finalContent = base64Content;
+      let isInline = true;
 
-      if (file.mimeType.includes('application/vnd.google-apps')) {
+      const isExcel = file.mimeType.includes('spreadsheet') || 
+                      file.mimeType.includes('excel') || 
+                      file.mimeType.includes('openxmlformats-officedocument.spreadsheetml.sheet');
+      
+      const isCSV = file.mimeType.includes('csv');
+
+      if (isExcel || isCSV) {
+        // --- EXCEL/CSV PROCESSING ---
+        // Gemini doesn't support inline Excel binary. We must convert to text/csv.
+        try {
+           const rawData = atob(base64Content);
+           const bytes = new Uint8Array(rawData.length);
+           for (let i = 0; i < rawData.length; i++) {
+               bytes[i] = rawData.charCodeAt(i);
+           }
+           const workbook = read(bytes, { type: 'array' });
+           
+           // Convert first sheet to CSV
+           const firstSheetName = workbook.SheetNames[0];
+           const worksheet = workbook.Sheets[firstSheetName];
+           const csvText = utils.sheet_to_csv(worksheet);
+           
+           finalContent = csvText;
+           isInline = false; // Text is not inlineData, it's a text part
+           effectiveMimeType = 'text/csv';
+           effectiveType = 'XLSX';
+        } catch (conversionError) {
+          console.error("Excel conversion failed", conversionError);
+          continue; // Skip if we can't read it
+        }
+      } else if (file.mimeType.includes('application/vnd.google-apps.document') || file.mimeType.includes('pdf')) {
         effectiveMimeType = 'application/pdf';
         effectiveType = 'PDF';
-      } else if (file.mimeType.includes('pdf')) {
-        effectiveType = 'PDF';
-      } else if (file.mimeType.includes('csv') || file.mimeType.includes('text')) {
-        effectiveType = 'TXT';
-      } else if (file.mimeType.includes('spreadsheet') || file.mimeType.includes('excel')) {
-        effectiveType = 'XLSX';
+      } else if (file.mimeType.includes('text')) {
+         // Pure text files
+         try {
+             finalContent = atob(base64Content);
+             isInline = false;
+             effectiveMimeType = 'text/plain';
+             effectiveType = 'TXT';
+         } catch (e) {
+             // Fallback to binary if decoding fails
+         }
       }
 
       processedDocs.push({
         id: file.id,
         name: file.name,
         type: effectiveType,
-        content: base64Content,
-        isInlineData: true, 
+        content: finalContent,
+        isInlineData: isInline, 
         mimeType: effectiveMimeType,
         category: 'financial', 
         uploadDate: new Date().toISOString()
