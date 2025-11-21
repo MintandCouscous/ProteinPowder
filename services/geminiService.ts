@@ -15,7 +15,7 @@ export const queryGemini = async (
   useWebSearch: boolean = false
 ): Promise<QueryResponse> => {
   if (!apiKey) {
-    return { text: "Error: No API Key provided. Please configure your Gemini API Key in the Debugger." };
+    return { text: "⚠️ **Configuration Error:** No Gemini API Key found.\n\nPlease open the **Debugger** (bug icon top right) and paste your API Key to enable AI features." };
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -108,7 +108,7 @@ export const queryGemini = async (
     // Check for common error codes
     if (error.status === 400) errorMessage = "API Error (400): Invalid Request. Check your API Key or inputs.";
     if (error.status === 403) errorMessage = "API Error (403): Permission Denied. Your API Key might be restricted.";
-    if (error.status === 429) errorMessage = "API Error (429): Quota Exceeded.";
+    if (error.status === 429) errorMessage = "API Error (429): Quota Exceeded. The API Key you are using has hit its rate limit. Please open the Debugger and provide a new API Key.";
 
     return { text: `**System Error:** ${errorMessage}` };
   }

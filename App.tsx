@@ -14,7 +14,7 @@ const App: React.FC = () => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      content: "# AlphaVault Terminal Ready (v1.0.7)\n\nI am connected to your secure context. I can analyze local files or connect to your **Google Drive** for live document retrieval.\n\nYou can ask me to:\n- Analyze the Q3 Tech Outlook\n- Summarize the Project Titan acquisition memo\n- Identify market risks for renewable energy\n\nHow can I assist with your deal flow today?",
+      content: "# AlphaVault Terminal Ready (v1.0.8)\n\nI am connected to your secure context. I can analyze local files or connect to your **Google Drive** for live document retrieval.\n\nYou can ask me to:\n- Analyze the Q3 Tech Outlook\n- Summarize the Project Titan acquisition memo\n- Identify market risks for renewable energy\n\nHow can I assist with your deal flow today?",
       timestamp: Date.now(),
     }
   ]);
@@ -28,12 +28,13 @@ const App: React.FC = () => {
   const [useWebSearch, setUseWebSearch] = useState(false);
   
   // API Key State (Runtime Config with Persistence)
+  // FIX: Removed exhausted default key. User must provide their own.
   const [geminiApiKey, setGeminiApiKey] = useState(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('ALPHA_VAULT_API_KEY');
       if (stored) return stored;
     }
-    return process.env.API_KEY || 'AIzaSyAtEBz45P1syHr8yG3DKJ9Mxmo1wsJX_W0';
+    return process.env.API_KEY || '';
   });
   const [keySaved, setKeySaved] = useState(false);
   
@@ -56,13 +57,13 @@ const App: React.FC = () => {
 
   const handleClearKey = () => {
     localStorage.removeItem('ALPHA_VAULT_API_KEY');
-    setGeminiApiKey(process.env.API_KEY || 'AIzaSyAtEBz45P1syHr8yG3DKJ9Mxmo1wsJX_W0');
+    setGeminiApiKey('');
     setKeySaved(false);
   };
 
   // Reusable Initialization Logic
   const initializeDriveIntegration = useCallback(() => {
-    console.log('AlphaVault v1.0.7 - Drive Init Starting');
+    console.log('AlphaVault v1.0.8 - Drive Init Starting');
     const clientId = process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com';
     
     if (PICKER_API_KEY && clientId) {
@@ -93,6 +94,19 @@ const App: React.FC = () => {
   useEffect(() => {
     initializeDriveIntegration();
   }, [initializeDriveIntegration]);
+  
+  // Check for missing key on load and warn user
+  useEffect(() => {
+    if (!geminiApiKey) {
+      setMessages(prev => [...prev, {
+        id: 'system-warning-key',
+        role: MessageRole.MODEL,
+        content: "⚠️ **Configuration Required:** No Gemini API Key found. \n\nPlease open the **Debugger** (bug icon top right) and paste your API Key to enable AI features.",
+        timestamp: Date.now()
+      }]);
+      setShowDebugModal(true);
+    }
+  }, []);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -391,7 +405,8 @@ const App: React.FC = () => {
                     <Key size={16} /> Gemini API Key (AI)
                   </h4>
                   <p className="text-[11px] text-slate-300 mb-3 leading-relaxed">
-                    This key powers the Chat Intelligence. If you see "Unable to process request", paste your <strong>new key</strong> here.
+                    This key powers the Chat Intelligence. <br/>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" className="underline hover:text-emerald-300">Get a free key here</a> if you don't have one.
                   </p>
                   <div className="flex gap-2">
                     <input 
@@ -399,7 +414,7 @@ const App: React.FC = () => {
                       value={geminiApiKey} 
                       onChange={(e) => { setGeminiApiKey(e.target.value); setKeySaved(false); }}
                       className="flex-1 bg-black border border-slate-700 rounded px-3 py-2 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none"
-                      placeholder="AIzaSy..."
+                      placeholder="Paste new AIzaSy... key here"
                     />
                     <button 
                       onClick={handleSaveKey}
@@ -411,7 +426,7 @@ const App: React.FC = () => {
                    <div className="flex justify-between items-center mt-2">
                     {keySaved && <p className="text-[10px] text-emerald-500">Key saved to secure local storage.</p>}
                     <button onClick={handleClearKey} className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-red-400 ml-auto">
-                      <Trash2 size={10} /> Reset to Default
+                      <Trash2 size={10} /> Reset
                     </button>
                   </div>
                </div>
