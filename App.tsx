@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import MessageBubble from './components/MessageBubble';
@@ -19,7 +18,7 @@ const App: React.FC = () => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      content: "# AlphaVault Team Terminal (v1.7.1)\n\nI am online and secure. The workspace is currently empty.\n\n**To begin analysis:**\n1. Connect **Google Drive** (Left Sidebar) to import Deal Room folders.\n2. Or upload local PDFs/Excel files.\n\nOnce data is loaded, I can perform cross-file analysis, financial summarization, and risk assessment.",
+      content: "# AlphaVault Team Terminal (v1.7.2)\n\nI am online and secure. The workspace is currently empty.\n\n**To begin analysis:**\n1. Connect **Google Drive** (Left Sidebar) to import Deal Room folders.\n2. Or upload local PDFs/Excel files.\n\nOnce data is loaded, I can perform cross-file analysis, financial summarization, and risk assessment.",
       timestamp: Date.now(),
     }
   ]);
@@ -86,7 +85,7 @@ const App: React.FC = () => {
 
   // Reusable Initialization Logic
   const initializeDriveIntegration = useCallback(() => {
-    console.log('AlphaVault v1.7.1 - Drive Init Starting');
+    console.log('AlphaVault v1.7.2 - Drive Init Starting');
     const clientId = process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com';
     
     if (PICKER_API_KEY && clientId) {
@@ -329,13 +328,29 @@ const App: React.FC = () => {
 
     try {
        const activeDocs = documents.filter(doc => activeDocIds.includes(doc.id));
-       // We use queryGemini but asking for a summary
+       
+       // STRICT MODE Synthesis Prompt
+       const synthesisPrompt = `
+       ROLE: Strict Data Auditor & Compiler.
+       TASK: Merge the provided documents into a single, comprehensive 'Master Deal Bible'.
+       
+       RULES (STRICT):
+       1. Use ONLY the provided text. Do NOT add outside information or hallucinations.
+       2. If a fact is not in the documents, do not invent it.
+       3. Keep financial figures exact. Do not round or estimate unless specified.
+       4. Structure the output with Markdown headers: Executive Summary, Key Financials, Risks, Legal Status, Operational Metrics.
+       5. Eliminate duplicate information.
+       `;
+
+       // We use queryGemini but override parameters for strictness
        const response = await queryGemini(
          geminiApiKey,
-         "Create a comprehensive, high-density 'Deal Bible' summary of all these documents. Include every key financial metric, risk, legal detail, and entity name. Format it as a structured report.",
+         synthesisPrompt,
          [], // No history, just docs
          activeDocs,
-         false
+         false,
+         0.0, // TEMPERATURE ZERO (Strict Mode)
+         "You are a robotic data compiler. You do not chat. You only output summarized facts found in the source text." // Override System Prompt
        );
 
        // Create new Document from the Summary
@@ -343,7 +358,7 @@ const App: React.FC = () => {
          id: 'summary-' + Date.now(),
          name: `MASTER_DEAL_BIBLE_${new Date().toLocaleDateString().replace(/\//g,'-')}.md`,
          type: 'MEMO',
-         content: response.text, // Store as raw text. Do NOT base64 encode.
+         content: response.text, // Store as raw text.
          isInlineData: false,
          mimeType: 'text/plain',
          category: 'memo',
@@ -357,7 +372,7 @@ const App: React.FC = () => {
        setMessages(prev => [...prev, {
         id: Date.now().toString(),
         role: MessageRole.MODEL,
-        content: `✅ **Deal Room Synthesized.**\nI have created a Master Memo and switched your active context to it.\n\n**Benefit:** Token usage dropped by ~95%. You can now chat without quota limits while retaining key knowledge.`,
+        content: `✅ **Deal Room Synthesized.**\nI have created a Master Memo using strict data auditing rules (0% hallucination tolerance) and switched your active context to it.\n\n**Benefit:** Token usage dropped by ~95%. You can now chat without quota limits.`,
         timestamp: Date.now()
        }]);
 

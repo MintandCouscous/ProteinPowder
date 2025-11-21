@@ -38,7 +38,10 @@ export const queryGemini = async (
   currentQuery: string,
   history: Message[],
   activeDocuments: DocumentFile[],
-  useWebSearch: boolean = false
+  useWebSearch: boolean = false,
+  // New overrides for Synthesis/Strict Mode
+  temperature: number = 0.4,
+  systemInstructionOverride?: string
 ): Promise<QueryResponse> => {
   if (!apiKey) {
     return { text: "⚠️ **Configuration Error:** No Gemini API Key found.\n\nPlease open the **Debugger** (bug icon top right) and paste your API Key to enable AI features." };
@@ -118,8 +121,8 @@ export const queryGemini = async (
       model: 'gemini-2.5-flash',
       contents: finalContents,
       config: {
-        systemInstruction: INITIAL_SYSTEM_INSTRUCTION, 
-        temperature: 0.4, 
+        systemInstruction: systemInstructionOverride || INITIAL_SYSTEM_INSTRUCTION, 
+        temperature: temperature, // Use the passed temperature (0.0 for synthesis)
         tools: tools.length > 0 ? tools : undefined,
       }
     });
