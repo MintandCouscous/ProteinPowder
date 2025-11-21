@@ -1,0 +1,5 @@
+{
+  "name": "AlphaVault AI",
+  "description": "Professional Investment Banking research assistant integrating secure data context with Gemini 2.5 reasoning.",
+  "requestFramePermissions": []
+}
