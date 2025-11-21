@@ -20,6 +20,13 @@ export interface SearchSource {
   uri: string;
 }
 
+export interface ChartData {
+  type: 'bar' | 'line' | 'area';
+  title: string;
+  data: Array<{ name: string; [key: string]: string | number }>;
+  dataKeys: string[]; // Keys to plot (e.g., "Revenue", "EBITDA")
+}
+
 export interface Message {
   id: string;
   role: MessageRole;
@@ -27,7 +34,7 @@ export interface Message {
   timestamp: number;
   sources?: SearchSource[];
   relatedDocs?: string[]; // IDs of documents referenced
-  isThinking?: boolean;
+  chartData?: ChartData; // Optional visualization data
 }
 
 export interface ChatSession {

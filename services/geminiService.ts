@@ -1,11 +1,11 @@
-
 import { GoogleGenAI, Tool } from "@google/genai";
-import { DocumentFile, Message, MessageRole, SearchSource } from '../types';
+import { DocumentFile, Message, MessageRole, SearchSource, ChartData } from '../types';
 import { INITIAL_SYSTEM_INSTRUCTION } from '../constants';
 
 interface QueryResponse {
   text: string;
   sources?: SearchSource[];
+  chartData?: ChartData;
 }
 
 // Lightweight validation call
@@ -77,9 +77,25 @@ export const queryGemini = async (
   }
 
   // 4. Construct Final Request
-  // We wrap the query with a specific instruction to ensure the model looks at history and ignores typos.
   const augmentedQuery = `
-  [INSTRUCTION: Use the provided documents and conversation history to answer. Handle spelling mistakes intelligently (fuzzy match). If the user refers to previous topics, use the history context.]
+  [INSTRUCTION: Use the provided documents and conversation history to answer. Handle spelling mistakes intelligently (fuzzy match).
+  
+  VISUALIZATION RULE:
+  If the user asks for trends, comparisons, or data that is best shown in a chart, you MUST include a JSON block at the END of your response in this exact format:
+  \`\`\`json
+  {
+    "chart": {
+      "type": "bar", // or "line"
+      "title": "Revenue vs EBITDA (2021-2023)",
+      "data": [
+        {"name": "2021", "Revenue": 100, "EBITDA": 20},
+        {"name": "2022", "Revenue": 120, "EBITDA": 25}
+      ],
+      "dataKeys": ["Revenue", "EBITDA"]
+    }
+  }
+  \`\`\`
+  Do NOT mention that you are generating JSON. Just show the text analysis first, then the hidden block.]
   
   User Query: ${currentQuery}
   `;
@@ -103,12 +119,28 @@ export const queryGemini = async (
       contents: finalContents,
       config: {
         systemInstruction: INITIAL_SYSTEM_INSTRUCTION, 
-        temperature: 0.4, // Slightly higher temperature for better fuzzy matching/inference
+        temperature: 0.4, 
         tools: tools.length > 0 ? tools : undefined,
       }
     });
 
-    const text = response.text || "I analyzed the data but could not generate a text response.";
+    let text = response.text || "I analyzed the data but could not generate a text response.";
+    let chartData: ChartData | undefined;
+
+    // Check for embedded Chart JSON
+    const jsonMatch = text.match(/```json\s*({[\s\S]*"chart"[\s\S]*})\s*```/);
+    if (jsonMatch) {
+      try {
+        const rawJson = JSON.parse(jsonMatch[1]);
+        if (rawJson.chart) {
+          chartData = rawJson.chart;
+          // Remove the JSON block from the visible text so it looks clean
+          text = text.replace(jsonMatch[0], '').trim();
+        }
+      } catch (e) {
+        console.warn("Failed to parse chart JSON", e);
+      }
+    }
     
     // Extract Grounding Metadata
     let sources: SearchSource[] = [];
@@ -125,7 +157,7 @@ export const queryGemini = async (
       });
     }
 
-    return { text, sources };
+    return { text, sources, chartData };
 
   } catch (error: any) {
     console.error("Gemini API Error:", error);
@@ -135,14 +167,12 @@ export const queryGemini = async (
       errorMessage += ` Details: ${error.message}`;
     }
     
-    // Specific handling to expose RAW error for user debugging
     if (error.status === 400) errorMessage = `API Error (400): Invalid Request. Raw: ${error.message}`;
     if (error.status === 403) errorMessage = `API Error (403): Permission Denied. Raw: ${error.message}`;
     
     if (error.status === 429) {
-        // Check if it's a specific "Generative Language API" not enabled error
         if (error.message && error.message.includes("User Project is not enabled")) {
-            errorMessage = "API Error (429): 'Generative Language API' is not enabled on your Google Cloud Project. Please search for it in the Console and click Enable.";
+            errorMessage = "API Error (429): 'Generative Language API' is not enabled. Please Enable in Google Cloud Console.";
         } else {
             errorMessage = `API Error (429): Quota Exceeded. Raw details: ${error.message}`;
         }
@@ -152,10 +182,6 @@ export const queryGemini = async (
   }
 };
 
-/**
- * Special function to generate structured JSON data for Excel extraction.
- * Uses Gemini's responseMimeType: 'application/json' feature.
- */
 export const generateStructuredData = async (
   apiKey: string,
   fieldsToExtract: string,
@@ -185,8 +211,8 @@ export const generateStructuredData = async (
 
     Output Requirement:
     - Return ONLY a JSON array of objects.
-    - Each object should represent a row (e.g., a year, a quarter, or a company).
-    - Normalize number formats (remove commas/currency symbols).
+    - Each object should represent a row.
+    - Normalize number formats.
     - If data is missing, use null or "N/A".
   `;
 
@@ -197,8 +223,8 @@ export const generateStructuredData = async (
       parts: [...documentParts, { text: extractionPrompt }]
     },
     config: {
-      responseMimeType: 'application/json', // The API "Killer Feature"
-      temperature: 0.1 // Strict for data extraction
+      responseMimeType: 'application/json',
+      temperature: 0.1 
     }
   });
 
