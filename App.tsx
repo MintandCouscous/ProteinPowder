@@ -4,9 +4,10 @@ import Sidebar from './components/Sidebar';
 import MessageBubble from './components/MessageBubble';
 import { Message, MessageRole, DocumentFile } from './types';
 import { DUMMY_DOCUMENTS } from './constants';
-import { queryGemini, validateGeminiKey } from './services/geminiService';
+import { queryGemini, validateGeminiKey, generateStructuredData } from './services/geminiService';
 import { initGoogleDrive, handleAuthClick, openDrivePicker, processPickedFiles } from './services/driveService';
-import { Send, Globe, Paperclip, Loader2, ShieldCheck, AlertTriangle, X, Bug, Rocket, Terminal, Copy, Check, Key, RefreshCw, Trash2, Zap, CreditCard, ExternalLink } from 'lucide-react';
+import { Send, Globe, Paperclip, Loader2, ShieldCheck, AlertTriangle, X, Bug, Rocket, Terminal, Copy, Check, Key, RefreshCw, Trash2, Zap, CreditCard, ExternalLink, Wrench, FileSpreadsheet, Download, FileJson } from 'lucide-react';
+import { utils, writeFile } from 'xlsx';
 
 const App: React.FC = () => {
   // Shared Team Key (Baked In)
@@ -18,7 +19,7 @@ const App: React.FC = () => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      content: "# AlphaVault Team Terminal (v1.3.0)\n\nI am online and secure. The workspace is currently empty.\n\n**To begin analysis:**\n1. Connect **Google Drive** (Left Sidebar) to import Deal Room folders.\n2. Or upload local PDFs/Excel files.\n\nOnce data is loaded, I can perform cross-file analysis, financial summarization, and risk assessment.",
+      content: "# AlphaVault Team Terminal (v1.4.0)\n\nI am online and secure. The workspace is currently empty.\n\n**To begin analysis:**\n1. Connect **Google Drive** (Left Sidebar) to import Deal Room folders.\n2. Or upload local PDFs/Excel files.\n\nOnce data is loaded, I can perform cross-file analysis, financial summarization, and risk assessment.",
       timestamp: Date.now(),
     }
   ]);
@@ -48,6 +49,7 @@ const App: React.FC = () => {
   // Modal States
   const [showDebugModal, setShowDebugModal] = useState(false);
   const [showDeployModal, setShowDeployModal] = useState(false);
+  const [showToolsMenu, setShowToolsMenu] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -216,6 +218,63 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSmartExtract = async () => {
+    const fields = prompt("What data would you like to extract to Excel? (e.g. 'Revenue, EBITDA, Net Income for 2022-2023')");
+    if (!fields) return;
+    setShowToolsMenu(false);
+
+    setMessages(prev => [...prev, {
+       id: Date.now().toString(),
+       role: MessageRole.MODEL,
+       content: `🔄 **Starting Smart Extraction...**\nAnalyzing documents to extract: *${fields}*\nGenerating Excel file...`,
+       timestamp: Date.now()
+    }]);
+    setIsLoading(true);
+
+    try {
+      const activeDocs = documents.filter(doc => activeDocIds.includes(doc.id));
+      const data = await generateStructuredData(geminiApiKey, fields, activeDocs);
+      
+      if (data.length === 0) {
+         throw new Error("No data found matching those criteria.");
+      }
+
+      // Create Excel
+      const ws = utils.json_to_sheet(data);
+      const wb = utils.book_new();
+      utils.book_append_sheet(wb, ws, "Extraction");
+      writeFile(wb, "AlphaVault_Extract.xlsx");
+
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        role: MessageRole.MODEL,
+        content: `✅ **Extraction Complete**\nSuccessfully extracted ${data.length} rows.\nFile downloaded: \`AlphaVault_Extract.xlsx\``,
+        timestamp: Date.now()
+      }]);
+
+    } catch (e: any) {
+       setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        role: MessageRole.MODEL,
+        content: `❌ **Extraction Failed**: ${e.message}`,
+        timestamp: Date.now()
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleExportChat = () => {
+    const chatText = messages.map(m => `[${new Date(m.timestamp).toLocaleString()}] ${m.role.toUpperCase()}:\n${m.content}\n`).join('\n-------------------\n');
+    const blob = new Blob([chatText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `AlphaVault_Audit_${new Date().toISOString().slice(0,10)}.txt`;
+    a.click();
+    setShowToolsMenu(false);
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -302,6 +361,49 @@ const App: React.FC = () => {
              )}
           </div>
           <div className="flex items-center gap-4">
+             
+             {/* TOOLS MENU */}
+             <div className="relative">
+                <button 
+                  onClick={() => setShowToolsMenu(!showToolsMenu)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${showToolsMenu ? 'bg-emerald-900/30 border-emerald-500/50 text-emerald-400' : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-600'}`}
+                >
+                  <Wrench size={14} />
+                  <span className="text-xs font-medium">Tools</span>
+                </button>
+                {showToolsMenu && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden">
+                    <div className="p-2">
+                       <button 
+                         onClick={handleSmartExtract}
+                         className="w-full flex items-center gap-3 px-3 py-2.5 text-xs text-slate-300 hover:bg-slate-800 rounded-lg transition-colors text-left group"
+                       >
+                         <div className="w-8 h-8 rounded-lg bg-emerald-900/30 text-emerald-500 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                           <FileSpreadsheet size={16} />
+                         </div>
+                         <div>
+                           <p className="font-semibold text-white">Smart Extract</p>
+                           <p className="text-[10px] text-slate-500">Export data to Excel</p>
+                         </div>
+                       </button>
+                       
+                       <button 
+                         onClick={handleExportChat}
+                         className="w-full flex items-center gap-3 px-3 py-2.5 text-xs text-slate-300 hover:bg-slate-800 rounded-lg transition-colors text-left group mt-1"
+                       >
+                         <div className="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 flex items-center justify-center group-hover:bg-slate-700 group-hover:text-white transition-colors">
+                           <Download size={16} />
+                         </div>
+                         <div>
+                           <p className="font-semibold text-white">Audit Export</p>
+                           <p className="text-[10px] text-slate-500">Download chat log</p>
+                         </div>
+                       </button>
+                    </div>
+                  </div>
+                )}
+             </div>
+
              <button 
                onClick={() => setShowDebugModal(true)}
                className="text-xs flex items-center gap-1 text-slate-500 hover:text-emerald-400 transition-colors"
@@ -456,6 +558,23 @@ const App: React.FC = () => {
                       {keyStatusMsg}
                     </p>
                   )}
+                  
+                  <a 
+                    href={`https://console.cloud.google.com/apis/credentials?project=${keyStatusMsg.includes('User Project') ? 'symbolic-idea-462220-t0' : 'alphavault'}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 block text-[10px] text-emerald-500/70 hover:text-emerald-400 flex items-center gap-1 border-t border-emerald-800/30 pt-2"
+                  >
+                    <ExternalLink size={10} /> Check Key Project in Console
+                  </a>
+                  <a 
+                    href="https://console.cloud.google.com/billing"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                  >
+                    <CreditCard size={10} /> Enable Billing (Upgrade to Paid)
+                  </a>
                </div>
 
               {driveInitError && (

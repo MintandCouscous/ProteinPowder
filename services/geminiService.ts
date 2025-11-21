@@ -151,3 +151,64 @@ export const queryGemini = async (
     return { text: `**System Error:** ${errorMessage}` };
   }
 };
+
+/**
+ * Special function to generate structured JSON data for Excel extraction.
+ * Uses Gemini's responseMimeType: 'application/json' feature.
+ */
+export const generateStructuredData = async (
+  apiKey: string,
+  fieldsToExtract: string,
+  activeDocuments: DocumentFile[]
+): Promise<any[]> => {
+  const ai = new GoogleGenAI({ apiKey });
+
+  const documentParts = activeDocuments.map(doc => {
+    if (doc.isInlineData) {
+      return {
+        inlineData: {
+          data: doc.content,
+          mimeType: doc.mimeType
+        }
+      };
+    } else {
+      return {
+        text: `DOCUMENT START [Name: ${doc.name}]:\n${doc.content}\nDOCUMENT END\n`
+      };
+    }
+  });
+
+  const extractionPrompt = `
+    Analyze the provided documents.
+    Task: Extract the following fields into a strictly formatted JSON array.
+    Fields to Extract: ${fieldsToExtract}
+
+    Output Requirement:
+    - Return ONLY a JSON array of objects.
+    - Each object should represent a row (e.g., a year, a quarter, or a company).
+    - Normalize number formats (remove commas/currency symbols).
+    - If data is missing, use null or "N/A".
+  `;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: {
+      role: 'user',
+      parts: [...documentParts, { text: extractionPrompt }]
+    },
+    config: {
+      responseMimeType: 'application/json', // The API "Killer Feature"
+      temperature: 0.1 // Strict for data extraction
+    }
+  });
+
+  if (response.text) {
+    try {
+      return JSON.parse(response.text);
+    } catch (e) {
+      console.error("Failed to parse JSON response", e);
+      throw new Error("AI generated invalid JSON.");
+    }
+  }
+  return [];
+};
