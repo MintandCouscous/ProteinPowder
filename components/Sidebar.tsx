@@ -14,7 +14,8 @@ import {
   RefreshCw,
   ArrowUp,
   Download,
-  XCircle
+  XCircle,
+  BrainCircuit
 } from 'lucide-react';
 import { DocumentFile } from '../types';
 
@@ -25,8 +26,10 @@ interface SidebarProps {
   onDeselectAll: () => void;
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onConnectDrive: () => void;
+  onSynthesize: () => void;
   isDriveLoading: boolean;
   isDriveReady: boolean;
+  isSynthesizing: boolean;
   driveInitError?: string | null;
   configError?: string | null;
   onOpenDebug: () => void;
@@ -42,8 +45,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   onDeselectAll,
   onUpload, 
   onConnectDrive,
+  onSynthesize,
   isDriveLoading,
   isDriveReady,
+  isSynthesizing,
   driveInitError,
   configError,
   onOpenDebug,
@@ -123,6 +128,19 @@ const Sidebar: React.FC<SidebarProps> = ({
               <HelpCircle size={18} />
             </button>
           </div>
+
+          {/* Synthesize / Compress Context */}
+          {activeDocIds.length > 3 && (
+            <button 
+              onClick={onSynthesize}
+              disabled={isSynthesizing}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-indigo-900/30 hover:bg-indigo-900/50 border border-indigo-500/30 text-indigo-300 rounded-lg transition-all text-xs font-medium"
+              title="Compress selected documents into one summary to save tokens"
+            >
+              {isSynthesizing ? <Loader2 size={14} className="animate-spin" /> : <BrainCircuit size={14} />}
+              <span>{isSynthesizing ? "Synthesizing..." : "Synthesize Deal Room"}</span>
+            </button>
+          )}
 
           {/* Secondary Action: Local Upload */}
           <label className="flex items-center justify-center gap-2 w-full p-2.5 rounded-lg border border-dashed border-slate-700 hover:border-emerald-500/50 hover:bg-slate-800/50 cursor-pointer transition-all group text-slate-400 hover:text-emerald-400">

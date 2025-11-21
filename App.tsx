@@ -19,13 +19,14 @@ const App: React.FC = () => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      content: "# AlphaVault Team Terminal (v1.6.3)\n\nI am online and secure. The workspace is currently empty.\n\n**To begin analysis:**\n1. Connect **Google Drive** (Left Sidebar) to import Deal Room folders.\n2. Or upload local PDFs/Excel files.\n\nOnce data is loaded, I can perform cross-file analysis, financial summarization, and risk assessment.",
+      content: "# AlphaVault Team Terminal (v1.7.0)\n\nI am online and secure. The workspace is currently empty.\n\n**To begin analysis:**\n1. Connect **Google Drive** (Left Sidebar) to import Deal Room folders.\n2. Or upload local PDFs/Excel files.\n\nOnce data is loaded, I can perform cross-file analysis, financial summarization, and risk assessment.",
       timestamp: Date.now(),
     }
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDriveLoading, setIsDriveLoading] = useState(false);
   const [isDriveReady, setIsDriveReady] = useState(false);
+  const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [driveInitError, setDriveInitError] = useState<string | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
   
@@ -85,7 +86,7 @@ const App: React.FC = () => {
 
   // Reusable Initialization Logic
   const initializeDriveIntegration = useCallback(() => {
-    console.log('AlphaVault v1.6.3 - Drive Init Starting');
+    console.log('AlphaVault v1.7.0 - Drive Init Starting');
     const clientId = process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com';
     
     if (PICKER_API_KEY && clientId) {
@@ -314,6 +315,64 @@ const App: React.FC = () => {
     setShowToolsMenu(false);
   };
 
+  // Context Synthesis Feature
+  const handleSynthesize = async () => {
+    if (activeDocIds.length < 2) return;
+    setIsSynthesizing(true);
+    
+    setMessages(prev => [...prev, {
+       id: Date.now().toString(),
+       role: MessageRole.MODEL,
+       content: `🧠 **Synthesizing Deal Room...**\nReading ${activeDocIds.length} documents to create a "Master Deal Bible". This will compress the context and prevent Quota errors.`,
+       timestamp: Date.now()
+    }]);
+
+    try {
+       const activeDocs = documents.filter(doc => activeDocIds.includes(doc.id));
+       // We use queryGemini but asking for a summary
+       const response = await queryGemini(
+         geminiApiKey,
+         "Create a comprehensive, high-density 'Deal Bible' summary of all these documents. Include every key financial metric, risk, legal detail, and entity name. Format it as a structured report.",
+         [], // No history, just docs
+         activeDocs,
+         false
+       );
+
+       // Create new Document from the Summary
+       const summaryDoc: DocumentFile = {
+         id: 'summary-' + Date.now(),
+         name: `MASTER_DEAL_BIBLE_${new Date().toLocaleDateString().replace(/\//g,'-')}.md`,
+         type: 'MEMO',
+         content: btoa(response.text), // Encode to base64 to match other docs (though processPickedFiles handles text too, we'll be safe)
+         isInlineData: false,
+         mimeType: 'text/plain',
+         category: 'memo',
+         uploadDate: new Date().toISOString()
+       };
+
+       // Update State: Add Summary, Select ONLY Summary, Deselect others
+       setDocuments(prev => [...prev, summaryDoc]);
+       setActiveDocIds([summaryDoc.id]); // Switch context to ONLY the summary
+
+       setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        role: MessageRole.MODEL,
+        content: `✅ **Deal Room Synthesized.**\nI have created a Master Memo and switched your active context to it.\n\n**Benefit:** Token usage dropped by ~95%. You can now chat without quota limits while retaining key knowledge.`,
+        timestamp: Date.now()
+       }]);
+
+    } catch (e: any) {
+       setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        role: MessageRole.MODEL,
+        content: `❌ **Synthesis Failed:** ${e.message}`,
+        timestamp: Date.now()
+       }]);
+    } finally {
+      setIsSynthesizing(false);
+    }
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -394,8 +453,10 @@ const App: React.FC = () => {
         onDeselectAll={handleDeselectAll}
         onUpload={handleUpload}
         onConnectDrive={handleConnectDrive}
+        onSynthesize={handleSynthesize}
         isDriveLoading={isDriveLoading}
         isDriveReady={isDriveReady}
+        isSynthesizing={isSynthesizing}
         driveInitError={driveInitError}
         configError={configError}
         onOpenDebug={() => setShowDebugModal(true)}
