@@ -5,7 +5,7 @@ import { Message, MessageRole, DocumentFile } from './types';
 import { DUMMY_DOCUMENTS } from './constants';
 import { queryGemini } from './services/geminiService';
 import { initGoogleDrive, handleAuthClick, openDrivePicker, processPickedFiles } from './services/driveService';
-import { Send, Globe, Paperclip, Loader2, ShieldCheck, AlertTriangle, X, Bug, Rocket, Terminal, Copy, Check, Key, RefreshCw } from 'lucide-react';
+import { Send, Globe, Paperclip, Loader2, ShieldCheck, AlertTriangle, X, Bug, Rocket, Terminal, Copy, Check, Key, RefreshCw, Trash2 } from 'lucide-react';
 
 const App: React.FC = () => {
   // State
@@ -14,7 +14,7 @@ const App: React.FC = () => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      content: "# AlphaVault Terminal Ready (v1.0.6)\n\nI am connected to your secure context. I can analyze local files or connect to your **Google Drive** for live document retrieval.\n\nYou can ask me to:\n- Analyze the Q3 Tech Outlook\n- Summarize the Project Titan acquisition memo\n- Identify market risks for renewable energy\n\nHow can I assist with your deal flow today?",
+      content: "# AlphaVault Terminal Ready (v1.0.7)\n\nI am connected to your secure context. I can analyze local files or connect to your **Google Drive** for live document retrieval.\n\nYou can ask me to:\n- Analyze the Q3 Tech Outlook\n- Summarize the Project Titan acquisition memo\n- Identify market risks for renewable energy\n\nHow can I assist with your deal flow today?",
       timestamp: Date.now(),
     }
   ]);
@@ -27,8 +27,14 @@ const App: React.FC = () => {
   const [activeDocIds, setActiveDocIds] = useState<string[]>(DUMMY_DOCUMENTS.map(d => d.id));
   const [useWebSearch, setUseWebSearch] = useState(false);
   
-  // API Key State (Runtime Config)
-  const [geminiApiKey, setGeminiApiKey] = useState(process.env.API_KEY || 'AIzaSyAtEBz45P1syHr8yG3DKJ9Mxmo1wsJX_W0');
+  // API Key State (Runtime Config with Persistence)
+  const [geminiApiKey, setGeminiApiKey] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('ALPHA_VAULT_API_KEY');
+      if (stored) return stored;
+    }
+    return process.env.API_KEY || 'AIzaSyAtEBz45P1syHr8yG3DKJ9Mxmo1wsJX_W0';
+  });
   const [keySaved, setKeySaved] = useState(false);
   
   // Modal States
@@ -41,9 +47,22 @@ const App: React.FC = () => {
   // Dedicated Picker Key provided by user
   const PICKER_API_KEY = 'AIzaSyCJV-78HN3nii-jfub-vVTNr5ULEK6hkbY';
 
+  // Persist Key Handler
+  const handleSaveKey = () => {
+    localStorage.setItem('ALPHA_VAULT_API_KEY', geminiApiKey);
+    setKeySaved(true);
+    setTimeout(() => setKeySaved(false), 2000);
+  };
+
+  const handleClearKey = () => {
+    localStorage.removeItem('ALPHA_VAULT_API_KEY');
+    setGeminiApiKey(process.env.API_KEY || 'AIzaSyAtEBz45P1syHr8yG3DKJ9Mxmo1wsJX_W0');
+    setKeySaved(false);
+  };
+
   // Reusable Initialization Logic
   const initializeDriveIntegration = useCallback(() => {
-    console.log('AlphaVault v1.0.6 - Drive Init Starting');
+    console.log('AlphaVault v1.0.7 - Drive Init Starting');
     const clientId = process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com';
     
     if (PICKER_API_KEY && clientId) {
@@ -383,13 +402,18 @@ const App: React.FC = () => {
                       placeholder="AIzaSy..."
                     />
                     <button 
-                      onClick={() => setKeySaved(true)}
+                      onClick={handleSaveKey}
                       className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded transition-colors"
                     >
                       {keySaved ? <Check size={14} /> : 'Save'}
                     </button>
                   </div>
-                  {keySaved && <p className="text-[10px] text-emerald-500 mt-1">Key updated for this session.</p>}
+                   <div className="flex justify-between items-center mt-2">
+                    {keySaved && <p className="text-[10px] text-emerald-500">Key saved to secure local storage.</p>}
+                    <button onClick={handleClearKey} className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-red-400 ml-auto">
+                      <Trash2 size={10} /> Reset to Default
+                    </button>
+                  </div>
                </div>
 
               {driveInitError && (
