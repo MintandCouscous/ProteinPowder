@@ -226,8 +226,8 @@ export const downloadDriveFile = async (fileId: string, mimeType: string, access
   });
 };
 
-export const processPickedFiles = async (pickedFiles: any[]): Promise<DocumentFile[]> => {
-  if (!accessToken) throw new Error("No access token available");
+export const processPickedFiles = async (pickedFiles: any[], token: string): Promise<DocumentFile[]> => {
+  if (!token) throw new Error("No access token available for file processing");
   
   const processedDocs: DocumentFile[] = [];
   let filesToDownload: any[] = [];
@@ -236,7 +236,7 @@ export const processPickedFiles = async (pickedFiles: any[]): Promise<DocumentFi
   for (const file of pickedFiles) {
     if (file.mimeType === 'application/vnd.google-apps.folder') {
       // It's a folder, fetch its children
-      const folderFiles = await listFilesInFolder(file.id, accessToken);
+      const folderFiles = await listFilesInFolder(file.id, token);
       filesToDownload = [...filesToDownload, ...folderFiles];
     } else {
       // It's a regular file
@@ -247,7 +247,7 @@ export const processPickedFiles = async (pickedFiles: any[]): Promise<DocumentFi
   // 2. Download and Process all files
   for (const file of filesToDownload) {
     try {
-      const base64Content = await downloadDriveFile(file.id, file.mimeType, accessToken);
+      const base64Content = await downloadDriveFile(file.id, file.mimeType, token);
       
       const effectiveMimeType = file.mimeType.includes('application/vnd.google-apps') 
         ? 'application/pdf' 

@@ -39,6 +39,7 @@ const App: React.FC = () => {
 
   // Reusable Initialization Logic
   const initializeDriveIntegration = useCallback(() => {
+    console.log('AlphaVault v1.0.1 - Drive Init Starting');
     // STRICT REAL MODE: We do NOT check for sandbox/blob. We try to load the API no matter what.
     const geminiKey = process.env.API_KEY || '';
     const clientId = process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com';
@@ -106,11 +107,12 @@ const App: React.FC = () => {
            setMessages(prev => [...prev, {
              id: Date.now().toString(),
              role: MessageRole.MODEL,
-             content: `*Downloading and encrypting ${pickedFiles.length} documents from Secure Drive...*`,
+             content: `*Downloading and encrypting ${pickedFiles.length} documents (including folder contents) from Secure Drive...*`,
              timestamp: Date.now()
            }]);
 
-           const newDocs = await processPickedFiles(pickedFiles);
+           // Pass token explicitly to ensure it's available for folder listing
+           const newDocs = await processPickedFiles(pickedFiles, token);
            setDocuments(prev => [...prev, ...newDocs]);
            setActiveDocIds(prev => [...prev, ...newDocs.map(d => d.id)]);
            
