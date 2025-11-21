@@ -1,3 +1,4 @@
+
 import { DocumentFile } from '../types';
 
 // Types for Google API globals
@@ -58,7 +59,6 @@ const initializeClients = (apiKey: string, clientId: string, onLoaded: () => voi
       }
 
       // IMPORTANT: Explicitly set ux_mode to 'popup' to avoid storagerelay issues.
-      // This attempts to force a popup window even in restricted environments.
       tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: SCOPES,
@@ -107,7 +107,6 @@ export const handleAuthClick = async (): Promise<string> => {
     // Override the callback for this specific request to capture the token
     tokenClient.callback = async (resp: any) => {
       if (resp.error) {
-        // We reject with the RAW error so the user sees it in the UI
         reject(resp.error_description || resp.error);
         return;
       }
@@ -115,9 +114,7 @@ export const handleAuthClick = async (): Promise<string> => {
       resolve(accessToken);
     };
 
-    // Request the token
     try {
-      // Force account selection to clear any stuck states
       tokenClient.requestAccessToken({ prompt: 'select_account' });
     } catch (e) {
       reject(e);
@@ -138,13 +135,13 @@ export const openDrivePicker = (
     return;
   }
 
-  // 1. View for Individual Files (PDF, Docs, Sheets)
+  // 1. View for Files (PDF, Docs, Sheets, EXCEL, CSV)
   const docsView = new window.google.picker.View(window.google.picker.ViewId.DOCS);
-  docsView.setMimeTypes("application/pdf,text/plain,application/vnd.google-apps.document,application/vnd.google-apps.spreadsheet");
+  docsView.setMimeTypes(
+    "application/pdf,text/plain,application/vnd.google-apps.document,application/vnd.google-apps.spreadsheet,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+  );
 
   // 2. View for Folder Selection
-  // FIX: Use DocsView instead of FOLDERS view for better compatibility, 
-  // and enable SelectFolder to return the folder itself.
   const folderView = new window.google.picker.DocsView(window.google.picker.ViewId.DOCS);
   folderView.setSelectFolderEnabled(true);
   folderView.setIncludeFolders(true);
@@ -152,7 +149,6 @@ export const openDrivePicker = (
   folderView.setLabel("Select Folder");
 
   const picker = new window.google.picker.PickerBuilder()
-    // FIX: Remove NAV_HIDDEN so users can see "Shared with me" / "My Drive"
     .enableFeature(window.google.picker.Feature.MULTISELECT_ENABLED)
     .enableFeature(window.google.picker.Feature.SUPPORT_DRIVES)
     .setDeveloperKey(apiKey)
@@ -174,8 +170,15 @@ export const openDrivePicker = (
  * Lists files inside a Google Drive folder
  */
 const listFilesInFolder = async (folderId: string, accessToken: string): Promise<any[]> => {
-  // Query: Inside folder, not trashed, and is a supported type
-  const query = `'${folderId}' in parents and trashed = false and (mimeType = 'application/pdf' or mimeType = 'text/plain' or mimeType = 'application/vnd.google-apps.document' or mimeType = 'application/vnd.google-apps.spreadsheet')`;
+  // Query: Inside folder, not trashed, and is a supported type (Updated to include Excel/CSV)
+  const query = `'${folderId}' in parents and trashed = false and (` +
+    `mimeType = 'application/pdf' or ` +
+    `mimeType = 'text/plain' or ` +
+    `mimeType = 'text/csv' or ` +
+    `mimeType = 'application/vnd.google-apps.document' or ` +
+    `mimeType = 'application/vnd.google-apps.spreadsheet' or ` +
+    `mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' or ` +
+    `mimeType = 'application/vnd.ms-excel')`;
   
   const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType)`;
 
@@ -234,14 +237,12 @@ export const processPickedFiles = async (pickedFiles: any[], token: string): Pro
   const processedDocs: DocumentFile[] = [];
   let filesToDownload: any[] = [];
 
-  // 1. Expand Folders: Check if user selected any folders and list their contents
+  // 1. Expand Folders
   for (const file of pickedFiles) {
     if (file.mimeType === 'application/vnd.google-apps.folder') {
-      // It's a folder, fetch its children
       const folderFiles = await listFilesInFolder(file.id, token);
       filesToDownload = [...filesToDownload, ...folderFiles];
     } else {
-      // It's a regular file
       filesToDownload.push(file);
     }
   }
@@ -251,11 +252,20 @@ export const processPickedFiles = async (pickedFiles: any[], token: string): Pro
     try {
       const base64Content = await downloadDriveFile(file.id, file.mimeType, token);
       
-      const effectiveMimeType = file.mimeType.includes('application/vnd.google-apps') 
-        ? 'application/pdf' 
-        : file.mimeType;
+      let effectiveMimeType = file.mimeType;
+      let effectiveType = 'FILE';
 
-      const effectiveType = effectiveMimeType.includes('pdf') ? 'PDF' : 'TXT';
+      if (file.mimeType.includes('application/vnd.google-apps')) {
+        effectiveMimeType = 'application/pdf';
+        effectiveType = 'PDF';
+      } else if (file.mimeType.includes('pdf')) {
+        effectiveType = 'PDF';
+      } else if (file.mimeType.includes('csv') || file.mimeType.includes('text')) {
+        effectiveType = 'TXT';
+      } else if (file.mimeType.includes('spreadsheet') || file.mimeType.includes('excel')) {
+        // Treat Excel as PDF/Binary for GenAI
+        effectiveType = 'XLSX';
+      }
 
       processedDocs.push({
         id: file.id,
