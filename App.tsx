@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import MessageBubble from './components/MessageBubble';
@@ -18,7 +19,7 @@ const App: React.FC = () => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      content: "# AlphaVault Team Terminal (v1.6.0)\n\nI am online and secure. The workspace is currently empty.\n\n**To begin analysis:**\n1. Connect **Google Drive** (Left Sidebar) to import Deal Room folders.\n2. Or upload local PDFs/Excel files.\n\nOnce data is loaded, I can perform cross-file analysis, financial summarization, and risk assessment.",
+      content: "# AlphaVault Team Terminal (v1.6.1)\n\nI am online and secure. The workspace is currently empty.\n\n**To begin analysis:**\n1. Connect **Google Drive** (Left Sidebar) to import Deal Room folders.\n2. Or upload local PDFs/Excel files.\n\nOnce data is loaded, I can perform cross-file analysis, financial summarization, and risk assessment.",
       timestamp: Date.now(),
     }
   ]);
@@ -84,7 +85,7 @@ const App: React.FC = () => {
 
   // Reusable Initialization Logic
   const initializeDriveIntegration = useCallback(() => {
-    console.log('AlphaVault v1.6.0 - Drive Init Starting');
+    console.log('AlphaVault v1.6.1 - Drive Init Starting');
     const clientId = process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com';
     
     if (PICKER_API_KEY && clientId) {
@@ -549,14 +550,86 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* DEBUG MODAL (Same as before, simplified for brevity in this response) */}
+      {/* DEBUG MODAL */}
       {showDebugModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
            <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-w-lg w-full">
-              <div className="p-6 text-center">
-                 <h3 className="text-white font-bold mb-2">Debugger</h3>
-                 <p className="text-slate-400 text-sm mb-4">Gemini Key: {geminiApiKey.substring(0,10)}...</p>
-                 <button onClick={() => setShowDebugModal(false)} className="bg-slate-800 px-4 py-2 rounded text-white">Close</button>
+              <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+                 <div className="flex items-center gap-2">
+                    <Bug className="text-emerald-500" size={18} />
+                    <h3 className="text-white font-bold">Connection Troubleshooter</h3>
+                 </div>
+                 <button onClick={() => setShowDebugModal(false)} className="text-slate-400 hover:text-white"><X size={18}/></button>
+              </div>
+              
+              <div className="p-6 space-y-6">
+                 {/* API Key Section */}
+                 <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
+                    <div className="flex justify-between items-center mb-2">
+                       <label className="text-xs font-bold text-slate-400 uppercase">Gemini API Key (Paid Tier Required)</label>
+                       <div className="flex gap-2">
+                          {keyStatus === 'valid' && <span className="text-xs text-emerald-400 font-mono flex items-center gap-1"><Check size={12}/> Valid</span>}
+                          {keyStatus === 'invalid' && <span className="text-xs text-red-400 font-mono flex items-center gap-1"><AlertCircle size={12}/> Invalid</span>}
+                       </div>
+                    </div>
+                    <div className="flex gap-2">
+                       <input 
+                         type="password" 
+                         value={geminiApiKey} 
+                         onChange={(e) => setGeminiApiKey(e.target.value)}
+                         placeholder="AIzaSy..."
+                         className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs font-mono text-white focus:border-emerald-500 outline-none"
+                       />
+                       <button 
+                         onClick={handleSaveKey}
+                         className="px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold"
+                       >
+                         {keySaved ? <Check size={14}/> : "Save"}
+                       </button>
+                    </div>
+                    <div className="flex gap-2 mt-2 justify-end">
+                        <button onClick={handleTestKey} disabled={keyStatus === 'testing'} className="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+                           {keyStatus === 'testing' ? <Loader2 size={10} className="animate-spin"/> : <Zap size={10}/>} Test Connection
+                        </button>
+                        <button onClick={handleClearKey} className="text-[10px] text-slate-500 hover:text-red-400 flex items-center gap-1">
+                           <Trash2 size={10}/> Reset to Shared
+                        </button>
+                    </div>
+                    {keyStatusMsg && <p className={`text-[10px] mt-2 ${keyStatus === 'valid' ? 'text-emerald-500' : 'text-red-400'}`}>{keyStatusMsg}</p>}
+                    
+                    <div className="mt-3 pt-3 border-t border-slate-800 flex gap-4">
+                        <a href="https://console.cloud.google.com/billing" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-emerald-400 transition-colors">
+                           <CreditCard size={12} /> Enable Billing
+                        </a>
+                        <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-emerald-400 transition-colors">
+                           <ExternalLink size={12} /> Check Key Project
+                        </a>
+                    </div>
+                 </div>
+
+                 <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase mb-2">App Origin (Required in Google Console)</p>
+                    <div className="flex items-center gap-2 bg-slate-950 p-3 rounded border border-slate-800">
+                       <code className="text-xs font-mono text-emerald-400 flex-1 break-all">{currentOrigin}</code>
+                       <button onClick={() => {navigator.clipboard.writeText(currentOrigin); setCopied(true); setTimeout(() => setCopied(false), 2000)}} className="p-1 hover:bg-slate-800 rounded text-slate-400">
+                          {copied ? <Check size={14}/> : <Copy size={14}/>}
+                       </button>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1">Add this URL to 'Authorized JavaScript origins' in Cloud Console.</p>
+                 </div>
+
+                 <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase mb-2">Browser Checklist</p>
+                    <ul className="text-xs text-slate-400 space-y-1 list-disc pl-4">
+                       <li>Disable "Brave Shields" (if using Brave)</li>
+                       <li>Disable AdBlockers for this tab</li>
+                       <li>Ensure you are NOT in Incognito mode</li>
+                    </ul>
+                 </div>
+              </div>
+              
+              <div className="p-4 border-t border-slate-800 bg-slate-950/50 flex justify-end">
+                 <button onClick={() => setShowDebugModal(false)} className="px-4 py-2 text-sm font-semibold text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">Close</button>
               </div>
            </div>
         </div>

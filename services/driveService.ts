@@ -128,7 +128,7 @@ export const openDrivePicker = (
     return;
   }
 
-  // Comprehensive list of MIME types to ensure Excel/CSV/PDF are visible
+  // Comprehensive list of MIME types
   const supportedMimeTypes = [
     "application/pdf",
     "text/plain",
@@ -140,21 +140,20 @@ export const openDrivePicker = (
     "application/vnd.google-apps.folder" // Folders
   ].join(",");
 
-  // 1. View for Files (PDF, Docs, Sheets, EXCEL, CSV)
+  // 1. View for Files (DocsView) - Good for seeing content
   const filesView = new window.google.picker.DocsView(window.google.picker.ViewId.DOCS);
   filesView.setMimeTypes(supportedMimeTypes);
   filesView.setIncludeFolders(true); 
-  filesView.setSelectFolderEnabled(false);
+  filesView.setSelectFolderEnabled(false); // Selecting a folder here opens it (Navigation)
   filesView.setLabel("Select Files");
 
-  // 2. View for Folder Selection
-  // Crucial: Using DocsView with setSelectFolderEnabled(true) allows picking folders.
-  // We ALSO setMimeTypes so that files INSIDE the folder are visible to the user during selection.
-  const folderView = new window.google.picker.DocsView(window.google.picker.ViewId.DOCS);
-  folderView.setSelectFolderEnabled(true);
-  folderView.setIncludeFolders(true);
-  folderView.setMimeTypes(supportedMimeTypes); 
-  folderView.setLabel("Select Folder (Ingest All)");
+  // 2. View for MULTI-FOLDER Selection (FoldersView)
+  // This view is specifically designed to allow ticking multiple folder boxes.
+  const multiFolderView = new window.google.picker.DocsView(window.google.picker.ViewId.FOLDERS);
+  multiFolderView.setIncludeFolders(true); 
+  multiFolderView.setMimeTypes("application/vnd.google-apps.folder");
+  multiFolderView.setSelectFolderEnabled(true); 
+  multiFolderView.setLabel("Select Multiple Folders");
 
   const picker = new window.google.picker.PickerBuilder()
     .enableFeature(window.google.picker.Feature.MULTISELECT_ENABLED)
@@ -162,8 +161,8 @@ export const openDrivePicker = (
     .setDeveloperKey(apiKey)
     .setAppId(storedClientId)
     .setOAuthToken(oauthToken)
-    .addView(filesView)     // Tab 1: Files
-    .addView(folderView)    // Tab 2: Folders
+    .addView(filesView)         // Tab 1: Files
+    .addView(multiFolderView)   // Tab 2: Folders (Multi)
     .setCallback((data: any) => {
       if (data.action === window.google.picker.Action.PICKED) {
         onPick(data.docs);
