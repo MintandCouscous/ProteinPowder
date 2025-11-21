@@ -13,7 +13,8 @@ import {
   Rocket,
   RefreshCw,
   ArrowUp,
-  Download
+  Download,
+  XCircle
 } from 'lucide-react';
 import { DocumentFile } from '../types';
 
@@ -21,6 +22,7 @@ interface SidebarProps {
   documents: DocumentFile[];
   activeDocIds: string[];
   onToggleDoc: (id: string) => void;
+  onDeselectAll: () => void;
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onConnectDrive: () => void;
   isDriveLoading: boolean;
@@ -37,6 +39,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   documents, 
   activeDocIds, 
   onToggleDoc, 
+  onDeselectAll,
   onUpload, 
   onConnectDrive,
   isDriveLoading,
@@ -131,7 +134,18 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* DATA INVENTORY SECTION */}
         <div>
-          <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-1 mb-3">Data Inventory</h3>
+          <div className="flex items-center justify-between mb-3 px-1">
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Data Inventory</h3>
+            {activeDocIds.length > 0 && (
+              <button 
+                onClick={onDeselectAll}
+                className="flex items-center gap-1 text-[10px] text-red-400 hover:text-red-300 transition-colors"
+                title="Deselect All Files"
+              >
+                <XCircle size={12} /> Clear
+              </button>
+            )}
+          </div>
           
           {documents.length === 0 ? (
             <div className="p-4 border border-slate-800 bg-slate-800/30 rounded-lg text-center">

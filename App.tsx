@@ -6,7 +6,7 @@ import { Message, MessageRole, DocumentFile } from './types';
 import { DUMMY_DOCUMENTS } from './constants';
 import { queryGemini, validateGeminiKey, generateStructuredData } from './services/geminiService';
 import { initGoogleDrive, handleAuthClick, openDrivePicker, processPickedFiles } from './services/driveService';
-import { Send, Globe, Paperclip, Loader2, ShieldCheck, AlertTriangle, X, Bug, Rocket, Terminal, Copy, Check, Key, RefreshCw, Trash2, Zap, CreditCard, ExternalLink, Wrench, FileSpreadsheet, Download, FileJson, Sparkles, AlertCircle, FileText } from 'lucide-react';
+import { Send, Globe, Paperclip, Loader2, ShieldCheck, AlertTriangle, X, Bug, Rocket, Terminal, Copy, Check, Key, RefreshCw, Trash2, Zap, CreditCard, ExternalLink, Wrench, FileSpreadsheet, Download, FileJson, Sparkles, AlertCircle, FileText, Cpu } from 'lucide-react';
 import { utils, writeFile } from 'xlsx';
 
 const App: React.FC = () => {
@@ -19,7 +19,7 @@ const App: React.FC = () => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      content: "# AlphaVault Team Terminal (v1.6.2)\n\nI am online and secure. The workspace is currently empty.\n\n**To begin analysis:**\n1. Connect **Google Drive** (Left Sidebar) to import Deal Room folders.\n2. Or upload local PDFs/Excel files.\n\nOnce data is loaded, I can perform cross-file analysis, financial summarization, and risk assessment.",
+      content: "# AlphaVault Team Terminal (v1.6.3)\n\nI am online and secure. The workspace is currently empty.\n\n**To begin analysis:**\n1. Connect **Google Drive** (Left Sidebar) to import Deal Room folders.\n2. Or upload local PDFs/Excel files.\n\nOnce data is loaded, I can perform cross-file analysis, financial summarization, and risk assessment.",
       timestamp: Date.now(),
     }
   ]);
@@ -85,7 +85,7 @@ const App: React.FC = () => {
 
   // Reusable Initialization Logic
   const initializeDriveIntegration = useCallback(() => {
-    console.log('AlphaVault v1.6.2 - Drive Init Starting');
+    console.log('AlphaVault v1.6.3 - Drive Init Starting');
     const clientId = process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com';
     
     if (PICKER_API_KEY && clientId) {
@@ -142,6 +142,20 @@ const App: React.FC = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Calculate Token Usage
+  const calculateTokenUsage = () => {
+    // Heuristic: ~3.5 chars per token average for mixed content (Base64 is dense, text is light)
+    const chars = activeDocIds.reduce((sum, id) => {
+      const doc = documents.find(d => d.id === id);
+      return sum + (doc?.content.length || 0);
+    }, 0);
+    const estimatedTokens = Math.round(chars / 3.5);
+    const percentage = Math.min((estimatedTokens / 1000000) * 100, 100); // 1M Token Limit
+    return { count: estimatedTokens, percentage };
+  };
+
+  const { count: tokenCount, percentage: tokenPercentage } = calculateTokenUsage();
 
   // Handlers
   const handleConnectDrive = async () => {
@@ -313,6 +327,10 @@ const App: React.FC = () => {
     );
   };
 
+  const handleDeselectAll = () => {
+    setActiveDocIds([]);
+  };
+
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -373,6 +391,7 @@ const App: React.FC = () => {
         documents={documents}
         activeDocIds={activeDocIds}
         onToggleDoc={handleToggleDoc}
+        onDeselectAll={handleDeselectAll}
         onUpload={handleUpload}
         onConnectDrive={handleConnectDrive}
         isDriveLoading={isDriveLoading}
@@ -398,6 +417,21 @@ const App: React.FC = () => {
                  <span>Team Key Active</span>
                </div>
              )}
+             
+             {/* CONTEXT USAGE METER */}
+             <div className="ml-4 flex items-center gap-2 px-3 py-1 bg-slate-900 rounded-full border border-slate-800" title="Token Usage / Throughput Limit (1 Million Tokens)">
+               <Cpu size={12} className={tokenPercentage > 80 ? 'text-red-500' : tokenPercentage > 50 ? 'text-amber-500' : 'text-emerald-500'} />
+               <div className="w-24 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                 <div 
+                    className={`h-full transition-all duration-500 ${tokenPercentage > 90 ? 'bg-red-500' : tokenPercentage > 60 ? 'bg-amber-500' : 'bg-emerald-500'}`} 
+                    style={{ width: `${tokenPercentage}%` }}
+                 />
+               </div>
+               <span className={`text-[10px] font-mono ${tokenPercentage > 90 ? 'text-red-400 font-bold' : 'text-slate-500'}`}>
+                 {Math.round(tokenCount / 1000)}k Tokens
+               </span>
+             </div>
+
           </div>
           <div className="flex items-center gap-4">
              
