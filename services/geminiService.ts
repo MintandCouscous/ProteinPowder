@@ -2,8 +2,11 @@ import { GoogleGenAI, Tool } from "@google/genai";
 import { DocumentFile, Message, MessageRole, SearchSource } from '../types';
 import { INITIAL_SYSTEM_INSTRUCTION } from '../constants';
 
+// Use Environment Variable if available, otherwise use the key provided by the user
+const GEMINI_API_KEY = process.env.API_KEY || 'AIzaSyAtEBz45P1syHr8yG3DKJ9Mxmo1wsJX_W0';
+
 // Initialize API Client
-const getClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getClient = () => new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 interface QueryResponse {
   text: string;
