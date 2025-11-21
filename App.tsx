@@ -5,7 +5,7 @@ import { Message, MessageRole, DocumentFile } from './types';
 import { DUMMY_DOCUMENTS } from './constants';
 import { queryGemini } from './services/geminiService';
 import { initGoogleDrive, handleAuthClick, openDrivePicker, processPickedFiles } from './services/driveService';
-import { Send, Globe, Paperclip, Loader2, ShieldCheck, AlertTriangle, X, Bug, Rocket, Terminal, Copy, Check } from 'lucide-react';
+import { Send, Globe, Paperclip, Loader2, ShieldCheck, AlertTriangle, X, Bug, Rocket, Terminal, Copy, Check, Key } from 'lucide-react';
 
 const App: React.FC = () => {
   // State
@@ -14,7 +14,7 @@ const App: React.FC = () => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      content: "# AlphaVault Terminal Ready\n\nI am connected to your secure context. I can analyze local files or connect to your **Google Drive** for live document retrieval.\n\nYou can ask me to:\n- Analyze the Q3 Tech Outlook\n- Summarize the Project Titan acquisition memo\n- Identify market risks for renewable energy\n\nHow can I assist with your deal flow today?",
+      content: "# AlphaVault Terminal Ready (v1.0.5)\n\nI am connected to your secure context. I can analyze local files or connect to your **Google Drive** for live document retrieval.\n\nYou can ask me to:\n- Analyze the Q3 Tech Outlook\n- Summarize the Project Titan acquisition memo\n- Identify market risks for renewable energy\n\nHow can I assist with your deal flow today?",
       timestamp: Date.now(),
     }
   ]);
@@ -26,6 +26,9 @@ const App: React.FC = () => {
   const [documents, setDocuments] = useState<DocumentFile[]>(DUMMY_DOCUMENTS);
   const [activeDocIds, setActiveDocIds] = useState<string[]>(DUMMY_DOCUMENTS.map(d => d.id));
   const [useWebSearch, setUseWebSearch] = useState(false);
+  
+  // API Key State (Runtime Config)
+  const [geminiApiKey, setGeminiApiKey] = useState(process.env.API_KEY || 'AIzaSyAtEBz45P1syHr8yG3DKJ9Mxmo1wsJX_W0');
   
   // Modal States
   const [showDebugModal, setShowDebugModal] = useState(false);
@@ -39,13 +42,9 @@ const App: React.FC = () => {
 
   // Reusable Initialization Logic
   const initializeDriveIntegration = useCallback(() => {
-    console.log('AlphaVault v1.0.4 - Drive Init Starting');
-    // STRICT REAL MODE: We do NOT check for sandbox/blob. We try to load the API no matter what.
-    const geminiKey = process.env.API_KEY || '';
+    console.log('AlphaVault v1.0.5 - Drive Init Starting');
     const clientId = process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com';
     
-    // We use the PICKER_API_KEY for the Google Client init to ensure the Picker loads correctly
-    // regardless of what the Gemini key is configured for.
     if (PICKER_API_KEY && clientId) {
       setDriveInitError(null);
       setConfigError(null);
@@ -60,17 +59,12 @@ const App: React.FC = () => {
         },
         (errorMsg) => {
           console.error('Google Drive Init Failed:', errorMsg);
-          // We log the error but allow retry
           setDriveInitError(errorMsg);
           setIsDriveReady(true); 
         }
       );
     } else {
-      const missing = [];
-      if (!geminiKey) missing.push("API_KEY (for AI)");
-      if (!clientId) missing.push("GOOGLE_CLIENT_ID");
-      
-      const errorMsg = `Missing Config: ${missing.join(', ')}`;
+      const errorMsg = `Missing Google Client ID`;
       setConfigError(errorMsg);
     }
   }, []);
@@ -87,20 +81,15 @@ const App: React.FC = () => {
 
   // Handlers
   const handleConnectDrive = async () => {
-    // 1. Config Help Logic
     if (configError) {
       setShowDebugModal(true);
       return;
     }
 
-    // 2. Connect Logic
     setIsDriveLoading(true);
     
     try {
-      // Attempt Real Auth
       const token = await handleAuthClick();
-
-      // IMPORTANT: Pass the dedicated PICKER_API_KEY here
       openDrivePicker(PICKER_API_KEY, token, async (pickedFiles) => {
         setIsDriveLoading(true);
         try {
@@ -111,7 +100,6 @@ const App: React.FC = () => {
              timestamp: Date.now()
            }]);
 
-           // Pass token explicitly to ensure it's available for folder listing
            const newDocs = await processPickedFiles(pickedFiles, token);
            setDocuments(prev => [...prev, ...newDocs]);
            setActiveDocIds(prev => [...prev, ...newDocs.map(d => d.id)]);
@@ -139,7 +127,7 @@ const App: React.FC = () => {
       console.error("Drive Auth Error:", error);
       setIsDriveLoading(false);
       setDriveInitError(typeof error === 'string' ? error : "Connection Failed");
-      setShowDebugModal(true); // Show debug modal so user can see the error
+      setShowDebugModal(true);
     }
   };
 
@@ -161,6 +149,7 @@ const App: React.FC = () => {
 
     try {
       const response = await queryGemini(
+        geminiApiKey, // Pass dynamic key
         userMessage.content,
         messages,
         activeDocs,
@@ -236,7 +225,7 @@ const App: React.FC = () => {
   };
 
   const copyEnvVars = () => {
-    const envText = `API_KEY=${process.env.API_KEY || ''}\nGOOGLE_CLIENT_ID=${process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com'}`;
+    const envText = `API_KEY=${geminiApiKey}\nGOOGLE_CLIENT_ID=${process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com'}`;
     navigator.clipboard.writeText(envText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -384,6 +373,23 @@ const App: React.FC = () => {
                 </div>
               )}
 
+               {/* Gemini API Key Config - NEW */}
+               <div className="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                  <h4 className="text-emerald-400 text-sm font-bold mb-2 flex items-center gap-2">
+                    <Key size={14} /> Gemini API Key (AI)
+                  </h4>
+                  <p className="text-[10px] text-slate-400 mb-2">
+                    If you see "Invalid API Key", update it here. This overrides environment variables.
+                  </p>
+                  <input 
+                    type="password" 
+                    value={geminiApiKey} 
+                    onChange={(e) => setGeminiApiKey(e.target.value)}
+                    className="w-full bg-black border border-slate-700 rounded px-3 py-2 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none"
+                    placeholder="Paste Gemini API Key here..."
+                  />
+               </div>
+
               <div className="space-y-2 opacity-75">
                 <div className="flex items-center justify-between">
                    <label className="text-xs font-bold text-slate-400 uppercase">App Origin (REQUIRED in Console)</label>
@@ -415,16 +421,6 @@ const App: React.FC = () => {
                 <p className="text-xs text-emerald-200/70">
                   Google Picker Key: <span className="font-mono bg-black/30 px-1 rounded">{PICKER_API_KEY ? 'Configured' : 'Missing'}</span>
                 </p>
-                {driveInitError?.includes('developer key') && (
-                   <a 
-                     href="https://console.cloud.google.com/apis/library/picker.googleapis.com" 
-                     target="_blank"
-                     rel="noopener noreferrer"
-                     className="block mt-2 text-[10px] text-emerald-400 hover:underline"
-                   >
-                     → Click here to Enable Google Picker API
-                   </a>
-                )}
               </div>
             </div>
 
@@ -480,7 +476,7 @@ const App: React.FC = () => {
                     {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
                   </button>
                   <pre className="font-mono text-xs text-emerald-400 overflow-x-auto">
-{`API_KEY=${process.env.API_KEY || '...'}
+{`API_KEY=${geminiApiKey}
 GOOGLE_CLIENT_ID=${process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com'}`}
                   </pre>
                 </div>

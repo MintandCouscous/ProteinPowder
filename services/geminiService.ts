@@ -2,24 +2,23 @@ import { GoogleGenAI, Tool } from "@google/genai";
 import { DocumentFile, Message, MessageRole, SearchSource } from '../types';
 import { INITIAL_SYSTEM_INSTRUCTION } from '../constants';
 
-// Use Environment Variable if available, otherwise use the key provided by the user
-const GEMINI_API_KEY = process.env.API_KEY || 'AIzaSyAtEBz45P1syHr8yG3DKJ9Mxmo1wsJX_W0';
-
-// Initialize API Client
-const getClient = () => new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-
 interface QueryResponse {
   text: string;
   sources?: SearchSource[];
 }
 
 export const queryGemini = async (
+  apiKey: string,
   currentQuery: string,
   history: Message[],
   activeDocuments: DocumentFile[],
   useWebSearch: boolean = false
 ): Promise<QueryResponse> => {
-  const ai = getClient();
+  if (!apiKey) {
+    return { text: "Error: No API Key provided. Please configure your Gemini API Key in the Debugger." };
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
 
   // 1. Prepare Context from Documents (as Parts)
   const documentParts = activeDocuments.map(doc => {
@@ -54,7 +53,6 @@ export const queryGemini = async (
   // 4. Construct Final Request
   // To avoid "Mixing Content and Parts" error, we ensure all elements in 'contents' are valid Content objects.
   // We attach the document context to the current user query part.
-  // This stateless context injection ensures the model always has access to the selected docs for the immediate question.
   
   const currentTurnContent = {
     role: 'user',
@@ -99,8 +97,19 @@ export const queryGemini = async (
 
     return { text, sources };
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini API Error:", error);
-    return { text: "Error: Unable to process request. Please verify your API key and try again." };
+    let errorMessage = "Unable to process request.";
+    
+    if (error.message) {
+      errorMessage += ` Details: ${error.message}`;
+    }
+    
+    // Check for common error codes
+    if (error.status === 400) errorMessage = "API Error (400): Invalid Request. Check your API Key or inputs.";
+    if (error.status === 403) errorMessage = "API Error (403): Permission Denied. Your API Key might be restricted.";
+    if (error.status === 429) errorMessage = "API Error (429): Quota Exceeded.";
+
+    return { text: `**System Error:** ${errorMessage}` };
   }
 };
