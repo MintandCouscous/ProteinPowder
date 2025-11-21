@@ -14,7 +14,7 @@ const App: React.FC = () => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      content: "# AlphaVault Terminal Ready (v1.0.9)\n\nI am connected to your secure context. I can analyze local files or connect to your **Google Drive** for live document retrieval.\n\nYou can ask me to:\n- Analyze the Q3 Tech Outlook\n- Summarize the Project Titan acquisition memo\n- Identify market risks for renewable energy\n\nHow can I assist with your deal flow today?",
+      content: "# AlphaVault Terminal Ready (v1.1.0)\n\nI am connected to your secure context. I can analyze local files or connect to your **Google Drive** for live document retrieval.\n\nYou can ask me to:\n- Analyze the Q3 Tech Outlook\n- Summarize the Project Titan acquisition memo\n- Identify market risks for renewable energy\n\nHow can I assist with your deal flow today?",
       timestamp: Date.now(),
     }
   ]);
@@ -73,7 +73,7 @@ const App: React.FC = () => {
 
   // Reusable Initialization Logic
   const initializeDriveIntegration = useCallback(() => {
-    console.log('AlphaVault v1.0.9 - Drive Init Starting');
+    console.log('AlphaVault v1.1.0 - Drive Init Starting');
     const clientId = process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com';
     
     if (PICKER_API_KEY && clientId) {

@@ -20,8 +20,9 @@ export const validateGeminiKey = async (apiKey: string): Promise<{valid: boolean
     return { valid: true, message: "Connection Successful" };
   } catch (error: any) {
     let msg = error.message || "Unknown Error";
-    if (error.status === 429) msg = "Quota Exceeded (429)";
-    if (error.status === 403) msg = "Invalid Key (403)";
+    // Specific helpful message for Rate Limiting
+    if (error.status === 429) msg = "Rate Limited (429): You are clicking too fast. Free keys have a 15 req/min limit. Wait 60s.";
+    if (error.status === 403) msg = "Invalid Key (403): Check your API Key configuration.";
     return { valid: false, message: msg };
   }
 };
@@ -127,7 +128,7 @@ export const queryGemini = async (
     // Check for common error codes
     if (error.status === 400) errorMessage = "API Error (400): Invalid Request. Check your API Key or inputs.";
     if (error.status === 403) errorMessage = "API Error (403): Permission Denied. Your API Key might be restricted.";
-    if (error.status === 429) errorMessage = "API Error (429): Quota Exceeded. The API Key you are using has hit its rate limit. Please open the Debugger and provide a new API Key.";
+    if (error.status === 429) errorMessage = "API Error (429): Rate Limit Exceeded. You are sending requests too fast for the Free Tier (15/min). Please wait 60 seconds.";
 
     return { text: `**System Error:** ${errorMessage}` };
   }
