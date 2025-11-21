@@ -19,7 +19,7 @@ const App: React.FC = () => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      content: "# AlphaVault Team Terminal (v1.7.0)\n\nI am online and secure. The workspace is currently empty.\n\n**To begin analysis:**\n1. Connect **Google Drive** (Left Sidebar) to import Deal Room folders.\n2. Or upload local PDFs/Excel files.\n\nOnce data is loaded, I can perform cross-file analysis, financial summarization, and risk assessment.",
+      content: "# AlphaVault Team Terminal (v1.7.1)\n\nI am online and secure. The workspace is currently empty.\n\n**To begin analysis:**\n1. Connect **Google Drive** (Left Sidebar) to import Deal Room folders.\n2. Or upload local PDFs/Excel files.\n\nOnce data is loaded, I can perform cross-file analysis, financial summarization, and risk assessment.",
       timestamp: Date.now(),
     }
   ]);
@@ -86,7 +86,7 @@ const App: React.FC = () => {
 
   // Reusable Initialization Logic
   const initializeDriveIntegration = useCallback(() => {
-    console.log('AlphaVault v1.7.0 - Drive Init Starting');
+    console.log('AlphaVault v1.7.1 - Drive Init Starting');
     const clientId = process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com';
     
     if (PICKER_API_KEY && clientId) {
@@ -343,7 +343,7 @@ const App: React.FC = () => {
          id: 'summary-' + Date.now(),
          name: `MASTER_DEAL_BIBLE_${new Date().toLocaleDateString().replace(/\//g,'-')}.md`,
          type: 'MEMO',
-         content: btoa(response.text), // Encode to base64 to match other docs (though processPickedFiles handles text too, we'll be safe)
+         content: response.text, // Store as raw text. Do NOT base64 encode.
          isInlineData: false,
          mimeType: 'text/plain',
          category: 'memo',
