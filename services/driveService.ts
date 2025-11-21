@@ -143,21 +143,23 @@ export const openDrivePicker = (
   docsView.setMimeTypes("application/pdf,text/plain,application/vnd.google-apps.document,application/vnd.google-apps.spreadsheet");
 
   // 2. View for Folder Selection
-  const folderView = new window.google.picker.DocsView(window.google.picker.ViewId.FOLDERS);
+  // FIX: Use DocsView instead of FOLDERS view for better compatibility, 
+  // and enable SelectFolder to return the folder itself.
+  const folderView = new window.google.picker.DocsView(window.google.picker.ViewId.DOCS);
   folderView.setSelectFolderEnabled(true);
   folderView.setIncludeFolders(true);
   folderView.setMimeTypes('application/vnd.google-apps.folder');
   folderView.setLabel("Select Folder");
 
   const picker = new window.google.picker.PickerBuilder()
-    .enableFeature(window.google.picker.Feature.NAV_HIDDEN)
+    // FIX: Remove NAV_HIDDEN so users can see "Shared with me" / "My Drive"
     .enableFeature(window.google.picker.Feature.MULTISELECT_ENABLED)
+    .enableFeature(window.google.picker.Feature.SUPPORT_DRIVES)
     .setDeveloperKey(apiKey)
     .setAppId(storedClientId)
     .setOAuthToken(oauthToken)
     .addView(docsView)     // Tab 1: Files
     .addView(folderView)   // Tab 2: Folders
-    .addView(new window.google.picker.DocsUploadView()) // Tab 3: Upload
     .setCallback((data: any) => {
       if (data.action === window.google.picker.Action.PICKED) {
         onPick(data.docs);

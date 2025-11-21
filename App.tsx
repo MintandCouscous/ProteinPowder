@@ -39,7 +39,7 @@ const App: React.FC = () => {
 
   // Reusable Initialization Logic
   const initializeDriveIntegration = useCallback(() => {
-    console.log('AlphaVault v1.0.1 - Drive Init Starting');
+    console.log('AlphaVault v1.0.3 - Drive Init Starting');
     // STRICT REAL MODE: We do NOT check for sandbox/blob. We try to load the API no matter what.
     const geminiKey = process.env.API_KEY || '';
     const clientId = process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com';
