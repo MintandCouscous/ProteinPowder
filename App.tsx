@@ -5,7 +5,7 @@ import { Message, MessageRole, DocumentFile } from './types';
 import { DUMMY_DOCUMENTS } from './constants';
 import { queryGemini } from './services/geminiService';
 import { initGoogleDrive, handleAuthClick, openDrivePicker, processPickedFiles } from './services/driveService';
-import { Send, Globe, Paperclip, Loader2, ShieldCheck, AlertTriangle, X, Bug, Rocket, Terminal, Copy, Check, Key } from 'lucide-react';
+import { Send, Globe, Paperclip, Loader2, ShieldCheck, AlertTriangle, X, Bug, Rocket, Terminal, Copy, Check, Key, RefreshCw } from 'lucide-react';
 
 const App: React.FC = () => {
   // State
@@ -14,7 +14,7 @@ const App: React.FC = () => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      content: "# AlphaVault Terminal Ready (v1.0.5)\n\nI am connected to your secure context. I can analyze local files or connect to your **Google Drive** for live document retrieval.\n\nYou can ask me to:\n- Analyze the Q3 Tech Outlook\n- Summarize the Project Titan acquisition memo\n- Identify market risks for renewable energy\n\nHow can I assist with your deal flow today?",
+      content: "# AlphaVault Terminal Ready (v1.0.6)\n\nI am connected to your secure context. I can analyze local files or connect to your **Google Drive** for live document retrieval.\n\nYou can ask me to:\n- Analyze the Q3 Tech Outlook\n- Summarize the Project Titan acquisition memo\n- Identify market risks for renewable energy\n\nHow can I assist with your deal flow today?",
       timestamp: Date.now(),
     }
   ]);
@@ -29,6 +29,7 @@ const App: React.FC = () => {
   
   // API Key State (Runtime Config)
   const [geminiApiKey, setGeminiApiKey] = useState(process.env.API_KEY || 'AIzaSyAtEBz45P1syHr8yG3DKJ9Mxmo1wsJX_W0');
+  const [keySaved, setKeySaved] = useState(false);
   
   // Modal States
   const [showDebugModal, setShowDebugModal] = useState(false);
@@ -42,7 +43,7 @@ const App: React.FC = () => {
 
   // Reusable Initialization Logic
   const initializeDriveIntegration = useCallback(() => {
-    console.log('AlphaVault v1.0.5 - Drive Init Starting');
+    console.log('AlphaVault v1.0.6 - Drive Init Starting');
     const clientId = process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com';
     
     if (PICKER_API_KEY && clientId) {
@@ -364,6 +365,33 @@ const App: React.FC = () => {
             </div>
             
             <div className="p-6 space-y-6">
+              
+              {/* Gemini API Key Config - TOP PRIORITY */}
+              <div className="bg-emerald-900/20 border border-emerald-800 p-4 rounded-lg animate-fade-in">
+                  <h4 className="text-emerald-400 text-sm font-bold mb-2 flex items-center gap-2">
+                    <Key size={16} /> Gemini API Key (AI)
+                  </h4>
+                  <p className="text-[11px] text-slate-300 mb-3 leading-relaxed">
+                    This key powers the Chat Intelligence. If you see "Unable to process request", paste your <strong>new key</strong> here.
+                  </p>
+                  <div className="flex gap-2">
+                    <input 
+                      type="password" 
+                      value={geminiApiKey} 
+                      onChange={(e) => { setGeminiApiKey(e.target.value); setKeySaved(false); }}
+                      className="flex-1 bg-black border border-slate-700 rounded px-3 py-2 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none"
+                      placeholder="AIzaSy..."
+                    />
+                    <button 
+                      onClick={() => setKeySaved(true)}
+                      className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded transition-colors"
+                    >
+                      {keySaved ? <Check size={14} /> : 'Save'}
+                    </button>
+                  </div>
+                  {keySaved && <p className="text-[10px] text-emerald-500 mt-1">Key updated for this session.</p>}
+               </div>
+
               {driveInitError && (
                 <div className="bg-red-900/20 border border-red-800 p-4 rounded-lg">
                   <h4 className="text-red-400 text-sm font-bold mb-1">Connection Error</h4>
@@ -373,24 +401,7 @@ const App: React.FC = () => {
                 </div>
               )}
 
-               {/* Gemini API Key Config - NEW */}
-               <div className="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                  <h4 className="text-emerald-400 text-sm font-bold mb-2 flex items-center gap-2">
-                    <Key size={14} /> Gemini API Key (AI)
-                  </h4>
-                  <p className="text-[10px] text-slate-400 mb-2">
-                    If you see "Invalid API Key", update it here. This overrides environment variables.
-                  </p>
-                  <input 
-                    type="password" 
-                    value={geminiApiKey} 
-                    onChange={(e) => setGeminiApiKey(e.target.value)}
-                    className="w-full bg-black border border-slate-700 rounded px-3 py-2 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none"
-                    placeholder="Paste Gemini API Key here..."
-                  />
-               </div>
-
-              <div className="space-y-2 opacity-75">
+              <div className="space-y-2 opacity-75 border-t border-slate-800 pt-4">
                 <div className="flex items-center justify-between">
                    <label className="text-xs font-bold text-slate-400 uppercase">App Origin (REQUIRED in Console)</label>
                 </div>
@@ -416,9 +427,9 @@ const App: React.FC = () => {
                 </ul>
               </div>
               
-              <div className="bg-emerald-900/10 border border-emerald-800/30 p-4 rounded-lg">
-                <h4 className="text-emerald-400 text-sm font-bold mb-1">API Config</h4>
-                <p className="text-xs text-emerald-200/70">
+              <div className="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                <h4 className="text-slate-400 text-sm font-bold mb-1">Picker Config</h4>
+                <p className="text-xs text-slate-500">
                   Google Picker Key: <span className="font-mono bg-black/30 px-1 rounded">{PICKER_API_KEY ? 'Configured' : 'Missing'}</span>
                 </p>
               </div>
