@@ -12,7 +12,8 @@ import {
   HelpCircle,
   Rocket,
   RefreshCw,
-  ArrowUp
+  ArrowUp,
+  Download
 } from 'lucide-react';
 import { DocumentFile } from '../types';
 
@@ -28,6 +29,8 @@ interface SidebarProps {
   configError?: string | null;
   onOpenDebug: () => void;
   onOpenDeploy: () => void;
+  canInstallApp?: boolean;
+  onInstallApp?: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -41,7 +44,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   driveInitError,
   configError,
   onOpenDebug,
-  onOpenDeploy
+  onOpenDeploy,
+  canInstallApp,
+  onInstallApp
 }) => {
   const categories = {
     financial: documents.filter(d => d.category === 'financial'),
@@ -232,6 +237,17 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Footer */}
       <div className="p-4 border-t border-slate-800 bg-slate-950/30">
+        {/* Install App Button (Conditional) */}
+        {canInstallApp && (
+          <button 
+            onClick={onInstallApp}
+            className="w-full mb-3 flex items-center justify-center gap-2 px-3 py-2 bg-slate-800 hover:bg-emerald-900/30 border border-slate-700 hover:border-emerald-500/50 text-emerald-400 text-xs font-bold rounded-lg transition-all"
+          >
+            <Download size={14} />
+            <span>INSTALL APP</span>
+          </button>
+        )}
+
         <button 
           onClick={onOpenDeploy}
           className="w-full mb-4 flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold rounded-lg shadow-md shadow-purple-900/20 transition-all active:scale-95"

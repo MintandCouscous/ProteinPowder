@@ -18,7 +18,7 @@ const App: React.FC = () => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      content: "# AlphaVault Team Terminal (v1.5.0)\n\nI am online and secure. The workspace is currently empty.\n\n**To begin analysis:**\n1. Connect **Google Drive** (Left Sidebar) to import Deal Room folders.\n2. Or upload local PDFs/Excel files.\n\nOnce data is loaded, I can perform cross-file analysis, financial summarization, and risk assessment.",
+      content: "# AlphaVault Team Terminal (v1.6.0)\n\nI am online and secure. The workspace is currently empty.\n\n**To begin analysis:**\n1. Connect **Google Drive** (Left Sidebar) to import Deal Room folders.\n2. Or upload local PDFs/Excel files.\n\nOnce data is loaded, I can perform cross-file analysis, financial summarization, and risk assessment.",
       timestamp: Date.now(),
     }
   ]);
@@ -51,6 +51,9 @@ const App: React.FC = () => {
   const [showToolsMenu, setShowToolsMenu] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // PWA Install State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Dedicated Picker Key provided by user
@@ -81,7 +84,7 @@ const App: React.FC = () => {
 
   // Reusable Initialization Logic
   const initializeDriveIntegration = useCallback(() => {
-    console.log('AlphaVault v1.3.0 - Drive Init Starting');
+    console.log('AlphaVault v1.6.0 - Drive Init Starting');
     const clientId = process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com';
     
     if (PICKER_API_KEY && clientId) {
@@ -108,11 +111,32 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Initialize on mount
+  // Initialize on mount & PWA Listener
   useEffect(() => {
     initializeDriveIntegration();
+
+    // PWA Install Event Listener
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, [initializeDriveIntegration]);
   
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
+
   // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -356,6 +380,8 @@ const App: React.FC = () => {
         configError={configError}
         onOpenDebug={() => setShowDebugModal(true)}
         onOpenDeploy={() => setShowDeployModal(true)}
+        canInstallApp={!!deferredPrompt}
+        onInstallApp={handleInstallApp}
       />
 
       <main className="flex-1 flex flex-col relative min-w-0">
@@ -529,7 +555,7 @@ const App: React.FC = () => {
            <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-w-lg w-full">
               <div className="p-6 text-center">
                  <h3 className="text-white font-bold mb-2">Debugger</h3>
-                 <p className="text-slate-400 text-sm mb-4">Use the previous comprehensive debug modal logic here.</p>
+                 <p className="text-slate-400 text-sm mb-4">Gemini Key: {geminiApiKey.substring(0,10)}...</p>
                  <button onClick={() => setShowDebugModal(false)} className="bg-slate-800 px-4 py-2 rounded text-white">Close</button>
               </div>
            </div>
