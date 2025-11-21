@@ -34,18 +34,23 @@ const App: React.FC = () => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Dedicated Picker Key provided by user
+  const PICKER_API_KEY = 'AIzaSyCJV-78HN3nii-jfub-vVTNr5ULEK6hkbY';
+
   // Reusable Initialization Logic
   const initializeDriveIntegration = useCallback(() => {
     // STRICT REAL MODE: We do NOT check for sandbox/blob. We try to load the API no matter what.
-    const apiKey = process.env.API_KEY || '';
+    const geminiKey = process.env.API_KEY || '';
     const clientId = process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com';
     
-    if (apiKey && clientId) {
+    // We use the PICKER_API_KEY for the Google Client init to ensure the Picker loads correctly
+    // regardless of what the Gemini key is configured for.
+    if (PICKER_API_KEY && clientId) {
       setDriveInitError(null);
       setConfigError(null);
       
       initGoogleDrive(
-        apiKey, 
+        PICKER_API_KEY, 
         clientId, 
         () => {
           console.log('Google Drive API Ready');
@@ -61,7 +66,7 @@ const App: React.FC = () => {
       );
     } else {
       const missing = [];
-      if (!apiKey) missing.push("API_KEY");
+      if (!geminiKey) missing.push("API_KEY (for AI)");
       if (!clientId) missing.push("GOOGLE_CLIENT_ID");
       
       const errorMsg = `Missing Config: ${missing.join(', ')}`;
@@ -94,7 +99,8 @@ const App: React.FC = () => {
       // Attempt Real Auth
       const token = await handleAuthClick();
 
-      openDrivePicker(process.env.API_KEY || '', token, async (pickedFiles) => {
+      // IMPORTANT: Pass the dedicated PICKER_API_KEY here
+      openDrivePicker(PICKER_API_KEY, token, async (pickedFiles) => {
         setIsDriveLoading(true);
         try {
            setMessages(prev => [...prev, {
@@ -400,6 +406,23 @@ const App: React.FC = () => {
                    <li>Ensure you are NOT in Incognito mode</li>
                    <li>Ensure you are NOT in a "Preview" or "Blob" window (Open in New Tab)</li>
                 </ul>
+              </div>
+              
+              <div className="bg-emerald-900/10 border border-emerald-800/30 p-4 rounded-lg">
+                <h4 className="text-emerald-400 text-sm font-bold mb-1">API Config</h4>
+                <p className="text-xs text-emerald-200/70">
+                  Google Picker Key: <span className="font-mono bg-black/30 px-1 rounded">{PICKER_API_KEY ? 'Configured' : 'Missing'}</span>
+                </p>
+                {driveInitError?.includes('developer key') && (
+                   <a 
+                     href="https://console.cloud.google.com/apis/library/picker.googleapis.com" 
+                     target="_blank"
+                     rel="noopener noreferrer"
+                     className="block mt-2 text-[10px] text-emerald-400 hover:underline"
+                   >
+                     → Click here to Enable Google Picker API
+                   </a>
+                )}
               </div>
             </div>
 
