@@ -173,12 +173,17 @@ export const queryGemini = async (
     if (error.status === 429) {
         if (error.message && error.message.includes("User Project is not enabled")) {
             errorMessage = "API Error (429): 'Generative Language API' is not enabled. Please Enable in Google Cloud Console.";
+        } else if (error.message && error.message.includes("quota")) {
+            // Parse retry time from message
+            const retryMatch = error.message.match(/retry in ([0-9.]+)s/);
+            const waitTime = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : "a few";
+            errorMessage = `⚠️ **High Traffic (Quota)**: You sent too much data (1M+ Tokens). Please wait **${waitTime} seconds** before sending the next message.`;
         } else {
             errorMessage = `API Error (429): Quota Exceeded. Raw details: ${error.message}`;
         }
     }
 
-    return { text: `**System Error:** ${errorMessage}` };
+    return { text: `${errorMessage}` };
   }
 };
 
