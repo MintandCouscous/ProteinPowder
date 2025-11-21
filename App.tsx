@@ -3,9 +3,9 @@ import Sidebar from './components/Sidebar';
 import MessageBubble from './components/MessageBubble';
 import { Message, MessageRole, DocumentFile } from './types';
 import { DUMMY_DOCUMENTS } from './constants';
-import { queryGemini } from './services/geminiService';
+import { queryGemini, validateGeminiKey } from './services/geminiService';
 import { initGoogleDrive, handleAuthClick, openDrivePicker, processPickedFiles } from './services/driveService';
-import { Send, Globe, Paperclip, Loader2, ShieldCheck, AlertTriangle, X, Bug, Rocket, Terminal, Copy, Check, Key, RefreshCw, Trash2 } from 'lucide-react';
+import { Send, Globe, Paperclip, Loader2, ShieldCheck, AlertTriangle, X, Bug, Rocket, Terminal, Copy, Check, Key, RefreshCw, Trash2, Zap } from 'lucide-react';
 
 const App: React.FC = () => {
   // State
@@ -14,7 +14,7 @@ const App: React.FC = () => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      content: "# AlphaVault Terminal Ready (v1.0.8)\n\nI am connected to your secure context. I can analyze local files or connect to your **Google Drive** for live document retrieval.\n\nYou can ask me to:\n- Analyze the Q3 Tech Outlook\n- Summarize the Project Titan acquisition memo\n- Identify market risks for renewable energy\n\nHow can I assist with your deal flow today?",
+      content: "# AlphaVault Terminal Ready (v1.0.9)\n\nI am connected to your secure context. I can analyze local files or connect to your **Google Drive** for live document retrieval.\n\nYou can ask me to:\n- Analyze the Q3 Tech Outlook\n- Summarize the Project Titan acquisition memo\n- Identify market risks for renewable energy\n\nHow can I assist with your deal flow today?",
       timestamp: Date.now(),
     }
   ]);
@@ -28,15 +28,16 @@ const App: React.FC = () => {
   const [useWebSearch, setUseWebSearch] = useState(false);
   
   // API Key State (Runtime Config with Persistence)
-  // FIX: Removed exhausted default key. User must provide their own.
   const [geminiApiKey, setGeminiApiKey] = useState(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('ALPHA_VAULT_API_KEY');
       if (stored) return stored;
     }
-    return process.env.API_KEY || '';
+    return ''; // Default to empty to force user input if no local storage
   });
   const [keySaved, setKeySaved] = useState(false);
+  const [keyStatus, setKeyStatus] = useState<'idle' | 'testing' | 'valid' | 'invalid'>('idle');
+  const [keyStatusMsg, setKeyStatusMsg] = useState('');
   
   // Modal States
   const [showDebugModal, setShowDebugModal] = useState(false);
@@ -52,18 +53,27 @@ const App: React.FC = () => {
   const handleSaveKey = () => {
     localStorage.setItem('ALPHA_VAULT_API_KEY', geminiApiKey);
     setKeySaved(true);
+    setKeyStatus('idle'); // Reset status on save
     setTimeout(() => setKeySaved(false), 2000);
+  };
+
+  const handleTestKey = async () => {
+    setKeyStatus('testing');
+    const result = await validateGeminiKey(geminiApiKey);
+    setKeyStatus(result.valid ? 'valid' : 'invalid');
+    setKeyStatusMsg(result.message);
   };
 
   const handleClearKey = () => {
     localStorage.removeItem('ALPHA_VAULT_API_KEY');
     setGeminiApiKey('');
     setKeySaved(false);
+    setKeyStatus('idle');
   };
 
   // Reusable Initialization Logic
   const initializeDriveIntegration = useCallback(() => {
-    console.log('AlphaVault v1.0.8 - Drive Init Starting');
+    console.log('AlphaVault v1.0.9 - Drive Init Starting');
     const clientId = process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com';
     
     if (PICKER_API_KEY && clientId) {
@@ -290,6 +300,12 @@ const App: React.FC = () => {
           <div className="flex items-center gap-2 text-sm text-slate-400">
              <ShieldCheck size={16} className="text-emerald-500" />
              <span className="hidden sm:inline">Secure Session: <span className="text-white font-mono">ENCRYPTED-256</span></span>
+             {geminiApiKey && (
+               <div className="ml-4 flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-900/30 border border-emerald-800 text-[10px] text-emerald-400">
+                 <Key size={10} />
+                 <span>Custom Key Active</span>
+               </div>
+             )}
           </div>
           <div className="flex items-center gap-4">
              <button 
@@ -412,7 +428,7 @@ const App: React.FC = () => {
                     <input 
                       type="password" 
                       value={geminiApiKey} 
-                      onChange={(e) => { setGeminiApiKey(e.target.value); setKeySaved(false); }}
+                      onChange={(e) => { setGeminiApiKey(e.target.value); setKeySaved(false); setKeyStatus('idle'); }}
                       className="flex-1 bg-black border border-slate-700 rounded px-3 py-2 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none"
                       placeholder="Paste new AIzaSy... key here"
                     />
@@ -423,12 +439,30 @@ const App: React.FC = () => {
                       {keySaved ? <Check size={14} /> : 'Save'}
                     </button>
                   </div>
-                   <div className="flex justify-between items-center mt-2">
-                    {keySaved && <p className="text-[10px] text-emerald-500">Key saved to secure local storage.</p>}
-                    <button onClick={handleClearKey} className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-red-400 ml-auto">
-                      <Trash2 size={10} /> Reset
-                    </button>
+                  
+                  {/* Test Connection Button */}
+                  <div className="mt-3 flex items-center justify-between border-t border-emerald-800/30 pt-2">
+                     <div className="flex items-center gap-2">
+                       <button 
+                         onClick={handleTestKey}
+                         disabled={!geminiApiKey || keyStatus === 'testing'}
+                         className="flex items-center gap-1 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-300 rounded transition-colors"
+                       >
+                         {keyStatus === 'testing' ? <Loader2 size={10} className="animate-spin" /> : <Zap size={10} />}
+                         Test Connection
+                       </button>
+                       {keyStatus === 'valid' && <span className="text-[10px] text-emerald-400 flex items-center gap-1"><Check size={10} /> Valid</span>}
+                       {keyStatus === 'invalid' && <span className="text-[10px] text-red-400 flex items-center gap-1"><X size={10} /> Failed</span>}
+                     </div>
+                     <button onClick={handleClearKey} className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-red-400 ml-auto">
+                        <Trash2 size={10} /> Reset
+                     </button>
                   </div>
+                  {keyStatusMsg && (
+                    <p className={`text-[10px] mt-1 ${keyStatus === 'valid' ? 'text-emerald-500' : 'text-red-400'}`}>
+                      {keyStatusMsg}
+                    </p>
+                  )}
                </div>
 
               {driveInitError && (

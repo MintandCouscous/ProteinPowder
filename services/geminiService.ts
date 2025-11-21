@@ -7,6 +7,25 @@ interface QueryResponse {
   sources?: SearchSource[];
 }
 
+// Lightweight validation call
+export const validateGeminiKey = async (apiKey: string): Promise<{valid: boolean, message: string}> => {
+  if (!apiKey) return { valid: false, message: "No API Key provided" };
+  
+  const ai = new GoogleGenAI({ apiKey });
+  try {
+    await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: { role: 'user', parts: [{ text: 'Test' }] },
+    });
+    return { valid: true, message: "Connection Successful" };
+  } catch (error: any) {
+    let msg = error.message || "Unknown Error";
+    if (error.status === 429) msg = "Quota Exceeded (429)";
+    if (error.status === 403) msg = "Invalid Key (403)";
+    return { valid: false, message: msg };
+  }
+};
+
 export const queryGemini = async (
   apiKey: string,
   currentQuery: string,
