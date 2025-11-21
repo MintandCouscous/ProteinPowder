@@ -126,7 +126,7 @@ export const handleAuthClick = async (): Promise<string> => {
 };
 
 /**
- * Opens the Google Picker to allow user to select files
+ * Opens the Google Picker to allow user to select files OR folders
  */
 export const openDrivePicker = (
   apiKey: string,
@@ -138,8 +138,16 @@ export const openDrivePicker = (
     return;
   }
 
-  const view = new window.google.picker.View(window.google.picker.ViewId.DOCS);
-  view.setMimeTypes("application/pdf,text/plain,application/vnd.google-apps.document,application/vnd.google-apps.spreadsheet");
+  // 1. View for Individual Files (PDF, Docs, Sheets)
+  const docsView = new window.google.picker.View(window.google.picker.ViewId.DOCS);
+  docsView.setMimeTypes("application/pdf,text/plain,application/vnd.google-apps.document,application/vnd.google-apps.spreadsheet");
+
+  // 2. View for Folder Selection
+  const folderView = new window.google.picker.DocsView(window.google.picker.ViewId.FOLDERS);
+  folderView.setSelectFolderEnabled(true);
+  folderView.setIncludeFolders(true);
+  folderView.setMimeTypes('application/vnd.google-apps.folder');
+  folderView.setLabel("Select Folder");
 
   const picker = new window.google.picker.PickerBuilder()
     .enableFeature(window.google.picker.Feature.NAV_HIDDEN)
@@ -147,8 +155,9 @@ export const openDrivePicker = (
     .setDeveloperKey(apiKey)
     .setAppId(storedClientId)
     .setOAuthToken(oauthToken)
-    .addView(view)
-    .addView(new window.google.picker.DocsUploadView())
+    .addView(docsView)     // Tab 1: Files
+    .addView(folderView)   // Tab 2: Folders
+    .addView(new window.google.picker.DocsUploadView()) // Tab 3: Upload
     .setCallback((data: any) => {
       if (data.action === window.google.picker.Action.PICKED) {
         onPick(data.docs);
@@ -157,6 +166,30 @@ export const openDrivePicker = (
     .build();
 
   picker.setVisible(true);
+};
+
+/**
+ * Lists files inside a Google Drive folder
+ */
+const listFilesInFolder = async (folderId: string, accessToken: string): Promise<any[]> => {
+  // Query: Inside folder, not trashed, and is a supported type
+  const query = `'${folderId}' in parents and trashed = false and (mimeType = 'application/pdf' or mimeType = 'text/plain' or mimeType = 'application/vnd.google-apps.document' or mimeType = 'application/vnd.google-apps.spreadsheet')`;
+  
+  const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType)`;
+
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    console.warn(`Failed to list files in folder ${folderId}`);
+    return [];
+  }
+
+  const data = await response.json();
+  return data.files || [];
 };
 
 /**
@@ -197,8 +230,22 @@ export const processPickedFiles = async (pickedFiles: any[]): Promise<DocumentFi
   if (!accessToken) throw new Error("No access token available");
   
   const processedDocs: DocumentFile[] = [];
+  let filesToDownload: any[] = [];
 
+  // 1. Expand Folders: Check if user selected any folders and list their contents
   for (const file of pickedFiles) {
+    if (file.mimeType === 'application/vnd.google-apps.folder') {
+      // It's a folder, fetch its children
+      const folderFiles = await listFilesInFolder(file.id, accessToken);
+      filesToDownload = [...filesToDownload, ...folderFiles];
+    } else {
+      // It's a regular file
+      filesToDownload.push(file);
+    }
+  }
+
+  // 2. Download and Process all files
+  for (const file of filesToDownload) {
     try {
       const base64Content = await downloadDriveFile(file.id, file.mimeType, accessToken);
       
