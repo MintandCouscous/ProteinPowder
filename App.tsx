@@ -5,7 +5,7 @@ import { Message, MessageRole, DocumentFile } from './types';
 import { DUMMY_DOCUMENTS } from './constants';
 import { queryGemini, validateGeminiKey } from './services/geminiService';
 import { initGoogleDrive, handleAuthClick, openDrivePicker, processPickedFiles } from './services/driveService';
-import { Send, Globe, Paperclip, Loader2, ShieldCheck, AlertTriangle, X, Bug, Rocket, Terminal, Copy, Check, Key, RefreshCw, Trash2, Zap } from 'lucide-react';
+import { Send, Globe, Paperclip, Loader2, ShieldCheck, AlertTriangle, X, Bug, Rocket, Terminal, Copy, Check, Key, RefreshCw, Trash2, Zap, CreditCard, ExternalLink } from 'lucide-react';
 
 const App: React.FC = () => {
   // State
@@ -14,7 +14,7 @@ const App: React.FC = () => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      content: "# AlphaVault Terminal Ready (v1.1.0)\n\nI am connected to your secure context. I can analyze local files or connect to your **Google Drive** for live document retrieval.\n\nYou can ask me to:\n- Analyze the Q3 Tech Outlook\n- Summarize the Project Titan acquisition memo\n- Identify market risks for renewable energy\n\nHow can I assist with your deal flow today?",
+      content: "# AlphaVault Terminal Ready (v1.1.2)\n\nI am connected to your secure context. I can analyze local files or connect to your **Google Drive** for live document retrieval.\n\nYou can ask me to:\n- Analyze the Q3 Tech Outlook\n- Summarize the Project Titan acquisition memo\n- Identify market risks for renewable energy\n\nHow can I assist with your deal flow today?",
       timestamp: Date.now(),
     }
   ]);
@@ -73,7 +73,7 @@ const App: React.FC = () => {
 
   // Reusable Initialization Logic
   const initializeDriveIntegration = useCallback(() => {
-    console.log('AlphaVault v1.1.0 - Drive Init Starting');
+    console.log('AlphaVault v1.1.2 - Drive Init Starting');
     const clientId = process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com';
     
     if (PICKER_API_KEY && clientId) {
@@ -422,7 +422,10 @@ const App: React.FC = () => {
                   </h4>
                   <p className="text-[11px] text-slate-300 mb-3 leading-relaxed">
                     This key powers the Chat Intelligence. <br/>
-                    <a href="https://aistudio.google.com/app/apikey" target="_blank" className="underline hover:text-emerald-300">Get a free key here</a> if you don't have one.
+                    <strong>Important:</strong> Ensure this key belongs to the <span className="text-white font-bold">AlphaVault</span> project (ID: alphavault).<br/>
+                    <a href="https://console.cloud.google.com/apis/credentials?project=alphavault" target="_blank" className="underline hover:text-emerald-300 flex items-center gap-1 mt-1">
+                      <ExternalLink size={12} className="inline"/> Check Key Project
+                    </a>
                   </p>
                   <div className="flex gap-2">
                     <input 
