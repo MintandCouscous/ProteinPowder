@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Tool } from "@google/genai";
 import { DocumentFile, Message, MessageRole, SearchSource } from '../types';
 import { INITIAL_SYSTEM_INSTRUCTION } from '../constants';
@@ -76,11 +77,18 @@ export const queryGemini = async (
   }
 
   // 4. Construct Final Request
+  // We wrap the query with a specific instruction to ensure the model looks at history and ignores typos.
+  const augmentedQuery = `
+  [INSTRUCTION: Use the provided documents and conversation history to answer. Handle spelling mistakes intelligently (fuzzy match). If the user refers to previous topics, use the history context.]
+  
+  User Query: ${currentQuery}
+  `;
+
   const currentTurnContent = {
     role: 'user',
     parts: [
       ...documentParts,
-      { text: currentQuery }
+      { text: augmentedQuery }
     ]
   };
 
@@ -95,7 +103,7 @@ export const queryGemini = async (
       contents: finalContents,
       config: {
         systemInstruction: INITIAL_SYSTEM_INSTRUCTION, 
-        temperature: 0.3,
+        temperature: 0.4, // Slightly higher temperature for better fuzzy matching/inference
         tools: tools.length > 0 ? tools : undefined,
       }
     });
