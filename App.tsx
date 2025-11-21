@@ -14,7 +14,7 @@ const App: React.FC = () => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      content: "# AlphaVault Terminal Ready (v1.1.2)\n\nI am connected to your secure context. I can analyze local files or connect to your **Google Drive** for live document retrieval.\n\nYou can ask me to:\n- Analyze the Q3 Tech Outlook\n- Summarize the Project Titan acquisition memo\n- Identify market risks for renewable energy\n\nHow can I assist with your deal flow today?",
+      content: "# AlphaVault Terminal Ready (v1.1.3)\n\nI am connected to your secure context. I can analyze local files or connect to your **Google Drive** for live document retrieval.\n\nYou can ask me to:\n- Analyze the Q3 Tech Outlook\n- Summarize the Project Titan acquisition memo\n- Identify market risks for renewable energy\n\nHow can I assist with your deal flow today?",
       timestamp: Date.now(),
     }
   ]);
@@ -73,7 +73,7 @@ const App: React.FC = () => {
 
   // Reusable Initialization Logic
   const initializeDriveIntegration = useCallback(() => {
-    console.log('AlphaVault v1.1.2 - Drive Init Starting');
+    console.log('AlphaVault v1.1.3 - Drive Init Starting');
     const clientId = process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com';
     
     if (PICKER_API_KEY && clientId) {
@@ -466,6 +466,24 @@ const App: React.FC = () => {
                       {keyStatusMsg}
                     </p>
                   )}
+               </div>
+
+               {/* Billing Help */}
+               <div className="bg-indigo-900/20 border border-indigo-800 p-3 rounded-lg flex gap-3 items-start">
+                 <CreditCard size={16} className="text-indigo-400 mt-0.5" />
+                 <div>
+                   <h4 className="text-indigo-400 text-xs font-bold">Upgrade to Paid (Fix Quota Limits)</h4>
+                   <p className="text-[10px] text-indigo-200/70 mb-1">
+                     If you see "429 Quota Exceeded", enable Pay-As-You-Go billing on your Google Cloud Project.
+                   </p>
+                   <a 
+                     href="https://console.cloud.google.com/billing" 
+                     target="_blank" 
+                     className="text-[10px] underline text-white hover:text-indigo-300 flex items-center gap-1"
+                   >
+                     Enable Billing <ExternalLink size={8} />
+                   </a>
+                 </div>
                </div>
 
               {driveInitError && (

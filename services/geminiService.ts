@@ -20,9 +20,14 @@ export const validateGeminiKey = async (apiKey: string): Promise<{valid: boolean
     return { valid: true, message: "Connection Successful" };
   } catch (error: any) {
     let msg = error.message || "Unknown Error";
-    // Specific helpful message for Rate Limiting
-    if (error.status === 429) msg = "Rate Limited (429): You are clicking too fast. Free keys have a 15 req/min limit. Wait 60s.";
-    if (error.status === 403) msg = "Invalid Key (403): Check your API Key configuration.";
+    
+    // Expose RAW error for debugging paid/billing issues
+    if (error.status === 429) {
+      msg = `Quota Exceeded (429). Raw Error: ${error.message}`;
+    }
+    if (error.status === 403) {
+      msg = `Permission Denied (403). Raw Error: ${error.message}`;
+    }
     return { valid: false, message: msg };
   }
 };
@@ -71,9 +76,6 @@ export const queryGemini = async (
   }
 
   // 4. Construct Final Request
-  // To avoid "Mixing Content and Parts" error, we ensure all elements in 'contents' are valid Content objects.
-  // We attach the document context to the current user query part.
-  
   const currentTurnContent = {
     role: 'user',
     parts: [
@@ -125,10 +127,18 @@ export const queryGemini = async (
       errorMessage += ` Details: ${error.message}`;
     }
     
-    // Check for common error codes
-    if (error.status === 400) errorMessage = "API Error (400): Invalid Request. Check your API Key or inputs.";
-    if (error.status === 403) errorMessage = "API Error (403): Permission Denied. Your API Key might be restricted.";
-    if (error.status === 429) errorMessage = "API Error (429): Rate Limit Exceeded. You are sending requests too fast for the Free Tier (15/min). Please wait 60 seconds.";
+    // Specific handling to expose RAW error for user debugging
+    if (error.status === 400) errorMessage = `API Error (400): Invalid Request. Raw: ${error.message}`;
+    if (error.status === 403) errorMessage = `API Error (403): Permission Denied. Raw: ${error.message}`;
+    
+    if (error.status === 429) {
+        // Check if it's a specific "Generative Language API" not enabled error
+        if (error.message && error.message.includes("User Project is not enabled")) {
+            errorMessage = "API Error (429): 'Generative Language API' is not enabled on your Google Cloud Project. Please search for it in the Console and click Enable.";
+        } else {
+            errorMessage = `API Error (429): Quota Exceeded. Raw details: ${error.message}`;
+        }
+    }
 
     return { text: `**System Error:** ${errorMessage}` };
   }
