@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import MessageBubble from './components/MessageBubble';
@@ -18,14 +19,13 @@ const App: React.FC = () => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      content: "# AlphaVault Team Terminal (v1.7.2)\n\nI am online and secure. The workspace is currently empty.\n\n**To begin analysis:**\n1. Connect **Google Drive** (Left Sidebar) to import Deal Room folders.\n2. Or upload local PDFs/Excel files.\n\nOnce data is loaded, I can perform cross-file analysis, financial summarization, and risk assessment.",
+      content: "# AlphaVault Team Terminal (v1.8.0)\n\nI am online and secure. The workspace is currently empty.\n\n**To begin analysis:**\n1. Connect **Google Drive** (Left Sidebar) to import Deal Room folders.\n2. Or upload local PDFs/Excel files.\n\nOnce data is loaded, I can perform cross-file analysis, financial summarization, and risk assessment.",
       timestamp: Date.now(),
     }
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDriveLoading, setIsDriveLoading] = useState(false);
   const [isDriveReady, setIsDriveReady] = useState(false);
-  const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [driveInitError, setDriveInitError] = useState<string | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
   
@@ -85,7 +85,7 @@ const App: React.FC = () => {
 
   // Reusable Initialization Logic
   const initializeDriveIntegration = useCallback(() => {
-    console.log('AlphaVault v1.7.2 - Drive Init Starting');
+    console.log('AlphaVault v1.8.0 - Drive Init Starting');
     const clientId = process.env.GOOGLE_CLIENT_ID || '803370988138-jocn4veeamir0p635eeq14lsd4117hag.apps.googleusercontent.com';
     
     if (PICKER_API_KEY && clientId) {
@@ -231,7 +231,8 @@ const App: React.FC = () => {
         userMessage.content,
         messages,
         activeDocs,
-        useWebSearch
+        useWebSearch,
+        0.2 // TUNED: 0.2 Temperature for accurate financial reasoning
       );
 
       const modelMessage: Message = {
@@ -314,78 +315,23 @@ const App: React.FC = () => {
     setShowToolsMenu(false);
   };
 
-  // Context Synthesis Feature
-  const handleSynthesize = async () => {
-    if (activeDocIds.length < 2) return;
-    setIsSynthesizing(true);
-    
-    setMessages(prev => [...prev, {
-       id: Date.now().toString(),
-       role: MessageRole.MODEL,
-       content: `🧠 **Synthesizing Deal Room...**\nReading ${activeDocIds.length} documents to create a "Master Deal Bible". This will compress the context and prevent Quota errors.`,
-       timestamp: Date.now()
-    }]);
-
-    try {
-       const activeDocs = documents.filter(doc => activeDocIds.includes(doc.id));
-       
-       // STRICT MODE Synthesis Prompt
-       const synthesisPrompt = `
-       ROLE: Strict Data Auditor & Compiler.
-       TASK: Merge the provided documents into a single, comprehensive 'Master Deal Bible'.
-       
-       RULES (STRICT):
-       1. Use ONLY the provided text. Do NOT add outside information or hallucinations.
-       2. If a fact is not in the documents, do not invent it.
-       3. Keep financial figures exact. Do not round or estimate unless specified.
-       4. Structure the output with Markdown headers: Executive Summary, Key Financials, Risks, Legal Status, Operational Metrics.
-       5. Eliminate duplicate information.
-       `;
-
-       // We use queryGemini but override parameters for strictness
-       const response = await queryGemini(
-         geminiApiKey,
-         synthesisPrompt,
-         [], // No history, just docs
-         activeDocs,
-         false,
-         0.0, // TEMPERATURE ZERO (Strict Mode)
-         "You are a robotic data compiler. You do not chat. You only output summarized facts found in the source text." // Override System Prompt
-       );
-
-       // Create new Document from the Summary
-       const summaryDoc: DocumentFile = {
-         id: 'summary-' + Date.now(),
-         name: `MASTER_DEAL_BIBLE_${new Date().toLocaleDateString().replace(/\//g,'-')}.md`,
-         type: 'MEMO',
-         content: response.text, // Store as raw text.
-         isInlineData: false,
-         mimeType: 'text/plain',
-         category: 'memo',
-         uploadDate: new Date().toISOString()
-       };
-
-       // Update State: Add Summary, Select ONLY Summary, Deselect others
-       setDocuments(prev => [...prev, summaryDoc]);
-       setActiveDocIds([summaryDoc.id]); // Switch context to ONLY the summary
-
-       setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        role: MessageRole.MODEL,
-        content: `✅ **Deal Room Synthesized.**\nI have created a Master Memo using strict data auditing rules (0% hallucination tolerance) and switched your active context to it.\n\n**Benefit:** Token usage dropped by ~95%. You can now chat without quota limits.`,
-        timestamp: Date.now()
-       }]);
-
-    } catch (e: any) {
-       setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        role: MessageRole.MODEL,
-        content: `❌ **Synthesis Failed:** ${e.message}`,
-        timestamp: Date.now()
-       }]);
-    } finally {
-      setIsSynthesizing(false);
-    }
+  // Filter / Focus Mode Feature
+  const handleFilterDocs = (term: string) => {
+     if (!term) return;
+     const lowerTerm = term.toLowerCase();
+     
+     // Logic: Select matched, Deselect unmatched
+     const matchedIds = documents.filter(doc => 
+        doc.name.toLowerCase().includes(lowerTerm) || 
+        doc.content.toLowerCase().includes(lowerTerm)
+     ).map(d => d.id);
+     
+     if (matchedIds.length === 0) {
+         alert(`No documents found matching "${term}"`);
+         return;
+     }
+     
+     setActiveDocIds(matchedIds);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -468,16 +414,15 @@ const App: React.FC = () => {
         onDeselectAll={handleDeselectAll}
         onUpload={handleUpload}
         onConnectDrive={handleConnectDrive}
-        onSynthesize={handleSynthesize}
         isDriveLoading={isDriveLoading}
         isDriveReady={isDriveReady}
-        isSynthesizing={isSynthesizing}
         driveInitError={driveInitError}
         configError={configError}
         onOpenDebug={() => setShowDebugModal(true)}
         onOpenDeploy={() => setShowDeployModal(true)}
         canInstallApp={!!deferredPrompt}
         onInstallApp={handleInstallApp}
+        onApplyFilter={handleFilterDocs}
       />
 
       <main className="flex-1 flex flex-col relative min-w-0">

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   HardDrive, 
   FileText, 
@@ -15,7 +15,8 @@ import {
   ArrowUp,
   Download,
   XCircle,
-  BrainCircuit
+  Filter,
+  Search
 } from 'lucide-react';
 import { DocumentFile } from '../types';
 
@@ -26,16 +27,15 @@ interface SidebarProps {
   onDeselectAll: () => void;
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onConnectDrive: () => void;
-  onSynthesize: () => void;
   isDriveLoading: boolean;
   isDriveReady: boolean;
-  isSynthesizing: boolean;
   driveInitError?: string | null;
   configError?: string | null;
   onOpenDebug: () => void;
   onOpenDeploy: () => void;
   canInstallApp?: boolean;
   onInstallApp?: () => void;
+  onApplyFilter: (term: string) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -45,17 +45,35 @@ const Sidebar: React.FC<SidebarProps> = ({
   onDeselectAll,
   onUpload, 
   onConnectDrive,
-  onSynthesize,
   isDriveLoading,
   isDriveReady,
-  isSynthesizing,
   driveInitError,
   configError,
   onOpenDebug,
   onOpenDeploy,
   canInstallApp,
-  onInstallApp
+  onInstallApp,
+  onApplyFilter
 }) => {
+  const [filterTerm, setFilterTerm] = useState('');
+
+  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value;
+    setFilterTerm(term);
+    if (term.trim() === '') {
+      // If cleared, maybe we don't auto-reset, or we could. 
+      // For now, let's just let the user clear the filter visual.
+    }
+  };
+
+  const triggerFilter = () => {
+    onApplyFilter(filterTerm);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') triggerFilter();
+  };
+
   const categories = {
     financial: documents.filter(d => d.category === 'financial'),
     memo: documents.filter(d => d.category === 'memo'),
@@ -129,19 +147,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             </button>
           </div>
 
-          {/* Synthesize / Compress Context */}
-          {activeDocIds.length > 3 && (
-            <button 
-              onClick={onSynthesize}
-              disabled={isSynthesizing}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-indigo-900/30 hover:bg-indigo-900/50 border border-indigo-500/30 text-indigo-300 rounded-lg transition-all text-xs font-medium"
-              title="Compress selected documents into one summary to save tokens"
-            >
-              {isSynthesizing ? <Loader2 size={14} className="animate-spin" /> : <BrainCircuit size={14} />}
-              <span>{isSynthesizing ? "Synthesizing..." : "Synthesize Deal Room"}</span>
-            </button>
-          )}
-
           {/* Secondary Action: Local Upload */}
           <label className="flex items-center justify-center gap-2 w-full p-2.5 rounded-lg border border-dashed border-slate-700 hover:border-emerald-500/50 hover:bg-slate-800/50 cursor-pointer transition-all group text-slate-400 hover:text-emerald-400">
             <Plus size={16} className="group-hover:scale-110 transition-transform" />
@@ -164,6 +169,30 @@ const Sidebar: React.FC<SidebarProps> = ({
               </button>
             )}
           </div>
+
+          {/* Focus Filter Input */}
+          {documents.length > 5 && (
+            <div className="mb-4 px-1 relative group">
+              <input 
+                type="text" 
+                value={filterTerm}
+                onChange={handleFilterChange}
+                onKeyDown={handleKeyDown}
+                placeholder="Filter (e.g. 'Tax', 'Q3')..."
+                className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-300 rounded-md px-3 py-2 pl-8 focus:outline-none focus:border-emerald-500/50 transition-colors placeholder-slate-600"
+              />
+              <Search size={12} className="absolute left-3 top-2.5 text-slate-600" />
+              {filterTerm && (
+                <button 
+                   onClick={triggerFilter}
+                   className="absolute right-1.5 top-1.5 p-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded flex items-center justify-center"
+                   title="Select only matching files"
+                >
+                   <Filter size={10} />
+                </button>
+              )}
+            </div>
+          )}
           
           {documents.length === 0 ? (
             <div className="p-4 border border-slate-800 bg-slate-800/30 rounded-lg text-center">
