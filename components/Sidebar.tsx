@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   HardDrive, 
@@ -7,11 +8,11 @@ import {
   PieChart, 
   Settings,
   Loader2,
-  AlertCircle,
-  RefreshCw,
   AlertTriangle,
   HelpCircle,
-  Rocket
+  Rocket,
+  RefreshCw,
+  ArrowUp
 } from 'lucide-react';
 import { DocumentFile } from '../types';
 
@@ -63,12 +64,12 @@ const Sidebar: React.FC<SidebarProps> = ({
     buttonClass = "bg-red-900/80 border border-red-700 text-red-200 hover:bg-red-800 cursor-pointer";
     buttonIcon = <RefreshCw size={18} />;
     buttonText = "Retry Connection";
-    isDisabled = false; // Allow clicking to retry
+    isDisabled = false; 
   } else if (configError) {
     buttonClass = "bg-amber-900/80 border border-amber-700 text-amber-200 hover:bg-amber-800 cursor-pointer";
     buttonIcon = <AlertTriangle size={18} />;
     buttonText = "Setup Required";
-    isDisabled = false; // Allow clicking to see instructions
+    isDisabled = false; 
   } else if (!isDriveReady) {
     buttonClass = "bg-slate-800 opacity-70 cursor-wait text-slate-400";
     buttonIcon = <Loader2 size={18} className="animate-spin" />;
@@ -81,9 +82,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Header */}
       <div className="p-6 border-b border-slate-800 flex items-center gap-3">
         <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-emerald-900/20">
-          A
+          AV
         </div>
-        <span className="text-lg font-semibold text-white tracking-tight">AlphaVault</span>
+        <span className="text-lg font-semibold text-white tracking-tight">AlphaVault <span className="text-[10px] text-emerald-400 font-mono bg-emerald-900/30 px-1 rounded ml-1">TEAM</span></span>
       </div>
 
       {/* Main Navigation */}
@@ -127,103 +128,110 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div>
           <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-1 mb-3">Data Inventory</h3>
           
-          <div className="space-y-6">
-            
-            {/* Category: Memos */}
-            {categories.memo.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-emerald-500/80 mb-2 px-1 flex items-center gap-1">
-                  INTERNAL MEMOS <span className="bg-slate-800 text-slate-400 px-1.5 rounded text-[10px]">{categories.memo.length}</span>
-                </p>
-                <div className="space-y-0.5">
-                  {categories.memo.map(doc => (
-                    <div 
-                      key={doc.id}
-                      onClick={() => onToggleDoc(doc.id)}
-                      className={`flex items-center gap-2.5 cursor-pointer px-2 py-2 rounded-md text-xs transition-all border ${
-                        activeDocIds.includes(doc.id) 
-                          ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' 
-                          : 'hover:bg-slate-800 text-slate-400 border-transparent hover:border-slate-800'
-                      }`}
-                    >
-                      {activeDocIds.includes(doc.id) ? (
-                        <CheckCircle2 size={14} className="shrink-0 text-emerald-500" />
-                      ) : (
-                        <FileText size={14} className="shrink-0 opacity-50" />
-                      )}
-                      <span className="truncate">{doc.name}</span>
-                    </div>
-                  ))}
+          {documents.length === 0 ? (
+            <div className="p-4 border border-slate-800 bg-slate-800/30 rounded-lg text-center">
+               <p className="text-xs text-slate-400 mb-2">No files loaded.</p>
+               <div className="flex flex-col items-center gap-1 text-emerald-500/70">
+                  <ArrowUp size={14} className="animate-bounce" />
+                  <span className="text-[10px]">Connect Drive to begin</span>
+               </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              
+              {/* Category: Memos */}
+              {categories.memo.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-emerald-500/80 mb-2 px-1 flex items-center gap-1">
+                    MEMOS <span className="bg-slate-800 text-slate-400 px-1.5 rounded text-[10px]">{categories.memo.length}</span>
+                  </p>
+                  <div className="space-y-0.5">
+                    {categories.memo.map(doc => (
+                      <div 
+                        key={doc.id}
+                        onClick={() => onToggleDoc(doc.id)}
+                        className={`flex items-center gap-2.5 cursor-pointer px-2 py-2 rounded-md text-xs transition-all border ${
+                          activeDocIds.includes(doc.id) 
+                            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' 
+                            : 'hover:bg-slate-800 text-slate-400 border-transparent hover:border-slate-800'
+                        }`}
+                      >
+                        {activeDocIds.includes(doc.id) ? (
+                          <CheckCircle2 size={14} className="shrink-0 text-emerald-500" />
+                        ) : (
+                          <FileText size={14} className="shrink-0 opacity-50" />
+                        )}
+                        <span className="truncate">{doc.name}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Category: Market Research */}
-            {categories.market.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-emerald-500/80 mb-2 px-1 flex items-center gap-1">
-                   MARKET RESEARCH <span className="bg-slate-800 text-slate-400 px-1.5 rounded text-[10px]">{categories.market.length}</span>
-                </p>
-                <div className="space-y-0.5">
-                  {categories.market.map(doc => (
-                    <div 
-                      key={doc.id}
-                      onClick={() => onToggleDoc(doc.id)}
-                      className={`flex items-center gap-2.5 cursor-pointer px-2 py-2 rounded-md text-xs transition-all border ${
-                        activeDocIds.includes(doc.id) 
-                          ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' 
-                          : 'hover:bg-slate-800 text-slate-400 border-transparent hover:border-slate-800'
-                      }`}
-                    >
-                       {activeDocIds.includes(doc.id) ? (
-                        <CheckCircle2 size={14} className="shrink-0 text-emerald-500" />
-                      ) : (
-                        <PieChart size={14} className="shrink-0 opacity-50" />
-                      )}
-                      <span className="truncate">{doc.name}</span>
-                    </div>
-                  ))}
+              {/* Category: Market Research */}
+              {categories.market.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-emerald-500/80 mb-2 px-1 flex items-center gap-1">
+                    RESEARCH <span className="bg-slate-800 text-slate-400 px-1.5 rounded text-[10px]">{categories.market.length}</span>
+                  </p>
+                  <div className="space-y-0.5">
+                    {categories.market.map(doc => (
+                      <div 
+                        key={doc.id}
+                        onClick={() => onToggleDoc(doc.id)}
+                        className={`flex items-center gap-2.5 cursor-pointer px-2 py-2 rounded-md text-xs transition-all border ${
+                          activeDocIds.includes(doc.id) 
+                            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' 
+                            : 'hover:bg-slate-800 text-slate-400 border-transparent hover:border-slate-800'
+                        }`}
+                      >
+                        {activeDocIds.includes(doc.id) ? (
+                          <CheckCircle2 size={14} className="shrink-0 text-emerald-500" />
+                        ) : (
+                          <PieChart size={14} className="shrink-0 opacity-50" />
+                        )}
+                        <span className="truncate">{doc.name}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-             {/* Category: Financial */}
-            {categories.financial.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-emerald-500/80 mb-2 px-1 flex items-center gap-1">
-                  FINANCIAL DATA <span className="bg-slate-800 text-slate-400 px-1.5 rounded text-[10px]">{categories.financial.length}</span>
-                </p>
-                <div className="space-y-0.5">
-                  {categories.financial.map(doc => (
-                    <div 
-                      key={doc.id}
-                      onClick={() => onToggleDoc(doc.id)}
-                      className={`flex items-center gap-2.5 cursor-pointer px-2 py-2 rounded-md text-xs transition-all border ${
-                        activeDocIds.includes(doc.id) 
-                          ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' 
-                          : 'hover:bg-slate-800 text-slate-400 border-transparent hover:border-slate-800'
-                      }`}
-                    >
-                       {activeDocIds.includes(doc.id) ? (
-                        <CheckCircle2 size={14} className="shrink-0 text-emerald-500" />
-                      ) : (
-                        <PieChart size={14} className="shrink-0 opacity-50" />
-                      )}
-                      <span className="truncate">{doc.name}</span>
-                    </div>
-                  ))}
+              {/* Category: Financial (Default for uploads) */}
+              {categories.financial.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-emerald-500/80 mb-2 px-1 flex items-center gap-1">
+                    FILES <span className="bg-slate-800 text-slate-400 px-1.5 rounded text-[10px]">{categories.financial.length}</span>
+                  </p>
+                  <div className="space-y-0.5">
+                    {categories.financial.map(doc => (
+                      <div 
+                        key={doc.id}
+                        onClick={() => onToggleDoc(doc.id)}
+                        className={`flex items-center gap-2.5 cursor-pointer px-2 py-2 rounded-md text-xs transition-all border ${
+                          activeDocIds.includes(doc.id) 
+                            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' 
+                            : 'hover:bg-slate-800 text-slate-400 border-transparent hover:border-slate-800'
+                        }`}
+                      >
+                        {activeDocIds.includes(doc.id) ? (
+                          <CheckCircle2 size={14} className="shrink-0 text-emerald-500" />
+                        ) : (
+                          <PieChart size={14} className="shrink-0 opacity-50" />
+                        )}
+                        <span className="truncate">{doc.name}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
-
       </div>
 
       {/* Footer */}
       <div className="p-4 border-t border-slate-800 bg-slate-950/30">
-        
-        {/* Deployment CTA */}
         <button 
           onClick={onOpenDeploy}
           className="w-full mb-4 flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold rounded-lg shadow-md shadow-purple-900/20 transition-all active:scale-95"
@@ -234,11 +242,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-800 cursor-pointer transition-colors group">
           <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center group-hover:bg-emerald-600 transition-colors">
-            <span className="text-xs font-bold text-white">JD</span>
+            <span className="text-xs font-bold text-white">TM</span>
           </div>
           <div className="flex-1">
-            <p className="text-sm font-medium text-white">John Doe</p>
-            <p className="text-[10px] text-slate-500 uppercase tracking-wide">Analyst, TMT</p>
+            <p className="text-sm font-medium text-white">Team User</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-wide">Authorized Access</p>
           </div>
           <Settings size={16} className="text-slate-500 group-hover:text-white transition-colors" />
         </div>
